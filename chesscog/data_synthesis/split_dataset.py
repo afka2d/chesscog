@@ -40,7 +40,7 @@ if __name__ == "__main__":
 
     for dataset_name, ids in datasets.items():
         dataset_dir = render_dir / dataset_name
-        dataset_dir.mkdir(exist_ok=True)
+        dataset_dir.mkdir(parents=True, exist_ok=True)
         for id in ids:
             (render_dir / f"{id}.png").rename(dataset_dir / f"{id}.png")
             (render_dir / f"{id}.json").rename(dataset_dir / f"{id}.json")
