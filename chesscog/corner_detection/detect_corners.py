@@ -200,23 +200,27 @@ def _sort_lines(lines: np.ndarray) -> np.ndarray:
 
 
 def _cluster_horizontal_and_vertical_lines(lines: np.ndarray):
-    lines = _sort_lines(lines)
-    thetas = lines[..., 1].reshape(-1, 1)
-    distance_matrix = pairwise_distances(
-        thetas, thetas, metric=_absolute_angle_difference)
-    agg = AgglomerativeClustering(n_clusters=2, metric="precomputed",
-                                  linkage="average")
-    clusters = agg.fit_predict(distance_matrix)
-
-    angle_with_y_axis = _absolute_angle_difference(thetas, 0.)
-    if angle_with_y_axis[clusters == 0].mean() > angle_with_y_axis[clusters == 1].mean():
-        hcluster, vcluster = 0, 1
-    else:
-        hcluster, vcluster = 1, 0
-
-    horizontal_lines = lines[clusters == hcluster]
-    vertical_lines = lines[clusters == vcluster]
-
+    """Cluster lines into horizontal and vertical groups based on their angles.
+    
+    Args:
+        lines (np.ndarray): Array of lines in Hesse normal form [rho, theta]
+        
+    Returns:
+        tuple: (horizontal_lines, vertical_lines) arrays of lines
+    """
+    if lines.shape[0] == 0:
+        return np.array([]), np.array([])
+        
+    # Calculate angle differences from horizontal (0) and vertical (pi/2)
+    angles = lines[:, 1]
+    horizontal_diff = _absolute_angle_difference(angles, 0)
+    vertical_diff = _absolute_angle_difference(angles, np.pi/2)
+    
+    # Classify lines based on which angle difference is smaller
+    is_horizontal = horizontal_diff < vertical_diff
+    horizontal_lines = lines[is_horizontal]
+    vertical_lines = lines[~is_horizontal]
+    
     return horizontal_lines, vertical_lines
 
 
