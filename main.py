@@ -33,7 +33,7 @@ async def recognize_chess_position(image: UploadFile = File(...), color: str = "
 
     fen = board.fen()
     ascii_board = str(board)
-    lichess_url = f"https://lichess.org/editor/{fen.replace(' ', '/')}"
+    lichess_url = f"https://lichess.org/editor/{fen}?color={color}"
 
     legal = board.is_valid()
 
