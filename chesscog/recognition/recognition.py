@@ -124,7 +124,7 @@ class ChessRecognizer:
         """
         with torch.no_grad():
             img, img_scale = resize_image(self._corner_detection_cfg, img)
-            corners = find_corners(self._corner_detection_cfg, img)
+            corners, _ = find_corners(self._corner_detection_cfg, img)  # Ignore debug images
             occupancy = self._classify_occupancy(img, turn, corners)
             pieces = self._classify_pieces(img, turn, corners, occupancy)
 

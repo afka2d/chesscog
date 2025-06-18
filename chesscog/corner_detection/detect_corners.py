@@ -32,7 +32,7 @@ from chesscog.core.coordinates import from_homogenous_coordinates, to_homogenous
 from chesscog.core.exceptions import ChessboardNotLocatedException
 
 
-def find_corners(cfg: CN, img: np.ndarray) -> np.ndarray:
+def find_corners(cfg: CN, img: np.ndarray) -> typing.Tuple[np.ndarray, dict]:
     """Determine the four corner points of the chessboard in an image.
 
     Args:
@@ -43,90 +43,200 @@ def find_corners(cfg: CN, img: np.ndarray) -> np.ndarray:
         ChessboardNotLocatedException: if the chessboard could not be found
 
     Returns:
-        np.ndarray: the pixel coordinates of the four corners
+        typing.Tuple[np.ndarray, dict]: the pixel coordinates of the four corners and a dictionary of debug images
     """
+    debug_images = {}
+    
+    # Debug prints for config
+    print("\nAPI Debug - Config Structure:")
+    print("RANSAC config:", cfg.RANSAC)
+    print("RANSAC OFFSET_TOLERANCE:", getattr(cfg.RANSAC, "OFFSET_TOLERANCE", "Not found"))
+    print("RANSAC BEST_SOLUTION_TOLERANCE:", getattr(cfg.RANSAC, "BEST_SOLUTION_TOLERANCE", "Not found"))
+    print("\nRANSAC Config Details:")
+    print("RANSAC keys:", dir(cfg.RANSAC))
+    print("RANSAC dict:", cfg.RANSAC.__dict__)
+    print("Full config:", cfg)
+    
     img, img_scale = resize_image(cfg, img)
+    debug_images['resized'] = img.copy()
 
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     edges = _detect_edges(cfg.EDGE_DETECTION, gray)
+    debug_images['edges'] = cv2.cvtColor(edges, cv2.COLOR_GRAY2BGR)
+    
+    # Debug print for edges
+    print("\nAPI Debug - Edge Detection:")
+    print(f"Input image shape: {img.shape}")
+    print(f"Grayscale image shape: {gray.shape}")
+    print(f"Edges shape: {edges.shape}")
+    print(f"Edges min/max values: {edges.min()}/{edges.max()}")
+    
     lines = _detect_lines(cfg, edges)
-    if lines.shape[0] > 400:
-        raise ChessboardNotLocatedException("too many lines in the image")
-    all_horizontal_lines, all_vertical_lines = _cluster_horizontal_and_vertical_lines(
-        lines)
-
-    horizontal_lines = _eliminate_similar_lines(
-        all_horizontal_lines, all_vertical_lines)
-    vertical_lines = _eliminate_similar_lines(
-        all_vertical_lines, all_horizontal_lines)
-
-    all_intersection_points = _get_intersection_points(horizontal_lines,
-                                                       vertical_lines)
-
+    
+    # Draw detected lines
+    lines_img = img.copy()
+    for rho, theta in lines:
+        a = np.cos(theta)
+        b = np.sin(theta)
+        x0 = a * rho
+        y0 = b * rho
+        x1 = int(x0 + 1000*(-b))
+        y1 = int(y0 + 1000*(a))
+        x2 = int(x0 - 1000*(-b))
+        y2 = int(y0 - 1000*(a))
+        cv2.line(lines_img, (x1, y1), (x2, y2), (0, 0, 255), 2)
+    debug_images['lines'] = lines_img
+    
+    all_horizontal_lines, all_vertical_lines = _cluster_horizontal_and_vertical_lines(lines)
+    
+    if len(all_horizontal_lines) == 0 or len(all_vertical_lines) == 0:
+        raise ValueError("No horizontal or vertical lines found after clustering. Try adjusting LINE_DETECTION parameters.")
+    
+    horizontal_lines = _eliminate_similar_lines(all_horizontal_lines, all_vertical_lines)
+    vertical_lines = _eliminate_similar_lines(all_vertical_lines, all_horizontal_lines)
+    
+    # Draw filtered horizontal and vertical lines
+    filtered_lines_img = img.copy()
+    for rho, theta in horizontal_lines:
+        a = np.cos(theta)
+        b = np.sin(theta)
+        x0 = a * rho
+        y0 = b * rho
+        x1 = int(x0 + 1000*(-b))
+        y1 = int(y0 + 1000*(a))
+        x2 = int(x0 - 1000*(-b))
+        y2 = int(y0 - 1000*(a))
+        cv2.line(filtered_lines_img, (x1, y1), (x2, y2), (0, 255, 0), 2)  # Green for horizontal
+    
+    for rho, theta in vertical_lines:
+        a = np.cos(theta)
+        b = np.sin(theta)
+        x0 = a * rho
+        y0 = b * rho
+        x1 = int(x0 + 1000*(-b))
+        y1 = int(y0 + 1000*(a))
+        x2 = int(x0 - 1000*(-b))
+        y2 = int(y0 - 1000*(a))
+        cv2.line(filtered_lines_img, (x1, y1), (x2, y2), (255, 0, 0), 2)  # Red for vertical
+    debug_images['filtered_lines'] = filtered_lines_img
+    
+    all_intersection_points = _get_intersection_points(horizontal_lines, vertical_lines)
+    
+    if len(all_intersection_points) == 0:
+        print("WARNING: No intersection points found!")
+        raise ChessboardNotLocatedException("No intersection points found")
+    
+    # Draw intersection points
+    intersections_img = img.copy()
+    for point in all_intersection_points.reshape(-1, 2):
+        cv2.circle(intersections_img, (int(point[0]), int(point[1])), 3, (0, 255, 255), -1)
+    debug_images['intersections'] = intersections_img
+    
+    # RANSAC
     best_num_inliers = 0
     best_configuration = None
     iterations = 0
-    while iterations < 200 or best_num_inliers < 30:
-        row1, row2 = _choose_from_range(len(horizontal_lines))
-        col1, col2 = _choose_from_range(len(vertical_lines))
-        transformation_matrix = _compute_homography(all_intersection_points,
-                                                    row1, row2, col1, col2)
-        warped_points = _warp_points(
-            transformation_matrix, all_intersection_points)
-        warped_points, intersection_points, horizontal_scale, vertical_scale = _discard_outliers(
-            cfg, warped_points, all_intersection_points)
-        num_inliers = np.prod(warped_points.shape[:-1])
-        if num_inliers > best_num_inliers:
-            warped_points *= np.array((horizontal_scale, vertical_scale))
-
-            # Quantize and reject deuplicates
-            (xmin, xmax, ymin, ymax), scale, quantized_points, intersection_points, warped_img_size = configuration = _quantize_points(
-                cfg, warped_points, intersection_points)
-
-            # Calculate remaining number of inliers
-            num_inliers = np.prod(quantized_points.shape[:-1])
-
-            if num_inliers > best_num_inliers:
-                best_num_inliers = num_inliers
-                best_configuration = configuration
-        iterations += 1
-        if iterations > 10000:
-            raise ChessboardNotLocatedException(
-                "RANSAC produced no viable results")
-
-    # Retrieve best configuration
-    (xmin, xmax, ymin, ymax), scale, quantized_points, intersection_points, warped_img_size = best_configuration
-
-    # Recompute transformation matrix based on all inliers
-    transformation_matrix = compute_transformation_matrix(
-        intersection_points, quantized_points)
-    inverse_transformation_matrix = np.linalg.inv(transformation_matrix)
-
-    # Warp grayscale image
-    dims = tuple(warped_img_size.astype(np.int32))
-    warped = cv2.warpPerspective(gray, transformation_matrix, dims)
-    borders = np.zeros_like(gray)
-    borders[3:-3, 3:-3] = 1
-    warped_borders = cv2.warpPerspective(borders, transformation_matrix, dims)
-    warped_mask = warped_borders == 1
-
-    # Refine board boundaries
-    xmin, xmax = _compute_vertical_borders(
-        cfg, warped, warped_mask, scale, xmin, xmax)
-    scaled_xmin, scaled_xmax = (int(x * scale[0]) for x in (xmin, xmax))
-    warped_mask[:, :scaled_xmin] = warped_mask[:, scaled_xmax:] = False
-    ymin, ymax = _compute_horizontal_borders(
-        cfg, warped, warped_mask, scale, ymin, ymax)
-
-    # Transform boundaries to image space
-    corners = np.array([[xmin, ymin],
-                        [xmax, ymin],
-                        [xmax, ymax],
-                        [xmin, ymax]]).astype(np.float32)
-    corners = corners * scale
-    img_corners = _warp_points(inverse_transformation_matrix, corners)
-    img_corners = img_corners / img_scale
-    return sort_corner_points(img_corners)
+    max_iterations = 1000
+    
+    print("\nAPI Debug - Starting RANSAC:")
+    print(f"Initial intersection points shape: {all_intersection_points.shape}")
+    print(f"Horizontal lines shape: {horizontal_lines.shape}")
+    print(f"Vertical lines shape: {vertical_lines.shape}")
+    
+    try:
+        while iterations < max_iterations:
+            iterations += 1
+            try:
+                row1, row2 = _choose_from_range(len(horizontal_lines))
+                col1, col2 = _choose_from_range(len(vertical_lines))
+                
+                print(f"\nRANSAC Iteration {iterations}:")
+                print(f"Selected rows: {row1}, {row2}")
+                print(f"Selected columns: {col1}, {col2}")
+                
+                points = np.array([
+                    all_intersection_points[row1, col1],
+                    all_intersection_points[row1, col2],
+                    all_intersection_points[row2, col1],
+                    all_intersection_points[row2, col2]
+                ])
+                
+                if not np.all(np.isfinite(points)):
+                    print("Invalid points detected, skipping iteration")
+                    continue
+                
+                print(f"Selected points shape: {points.shape}")
+                print(f"Selected points:\n{points}")
+                
+                transformation_matrix = _compute_homography(all_intersection_points,
+                                                        row1, row2, col1, col2)
+                
+                if not np.all(np.isfinite(transformation_matrix)):
+                    print("Invalid transformation matrix, skipping iteration")
+                    continue
+                
+                print(f"Transformation matrix shape: {transformation_matrix.shape}")
+                print(f"Transformation matrix:\n{transformation_matrix}")
+                
+                warped_points = _warp_points(transformation_matrix, all_intersection_points)
+                
+                if not np.all(np.isfinite(warped_points)):
+                    print("Invalid warped points, skipping iteration")
+                    continue
+                    
+                print(f"Warped points shape: {warped_points.shape}")
+                print(f"Warped points min/max values: {np.min(warped_points)}/{np.max(warped_points)}")
+                
+                inliers = np.ones(warped_points.shape[:-1], dtype=bool)
+                for i in range(warped_points.shape[0]):
+                    for j in range(warped_points.shape[1]):
+                        point = warped_points[i, j]
+                        if not (0 <= point[0] <= 1 and 0 <= point[1] <= 1):
+                            inliers[i, j] = False
+                
+                num_inliers = np.sum(inliers)
+                print(f"Number of inliers: {num_inliers}")
+                
+                if num_inliers > best_num_inliers:
+                    best_num_inliers = num_inliers
+                    best_configuration = (row1, row2, col1, col2)
+                    print(f"New best configuration found with {num_inliers} inliers")
+                
+                if num_inliers >= 30:
+                    print("Found solution with sufficient inliers, exiting RANSAC")
+                    break
+                
+            except Exception as e:
+                print(f"Error in RANSAC iteration: {str(e)}")
+                continue
+        
+        if iterations >= max_iterations:
+            print(f"RANSAC reached maximum iterations ({max_iterations})")
+            if best_num_inliers == 0:
+                raise ChessboardNotLocatedException("No valid solution found after maximum iterations")
+            print(f"Using best solution found with {best_num_inliers} inliers")
+        
+        # Use the best configuration found
+        row1, row2, col1, col2 = best_configuration
+        corners = np.array([
+            all_intersection_points[row1, col1],
+            all_intersection_points[row1, col2],
+            all_intersection_points[row2, col1],
+            all_intersection_points[row2, col2]
+        ])
+        
+        # Draw final corners
+        corners_img = img.copy()
+        for corner in corners:
+            cv2.circle(corners_img, (int(corner[0]), int(corner[1])), 5, (0, 0, 255), -1)
+        cv2.polylines(corners_img, [corners.astype(np.int32)], True, (0, 255, 0), 2)
+        debug_images['corners'] = corners_img
+        
+        return sort_corner_points(corners), debug_images
+        
+    except Exception as e:
+        print(f"Error in RANSAC: {str(e)}")
+        raise ChessboardNotLocatedException(f"RANSAC failed: {str(e)}")
 
 
 def resize_image(cfg: CN, img: np.ndarray) -> typing.Tuple[np.ndarray, float]:
@@ -140,10 +250,10 @@ def resize_image(cfg: CN, img: np.ndarray) -> typing.Tuple[np.ndarray, float]:
         typing.Tuple[np.ndarray, float]: the resized image along with the scale of this new image
     """
     h, w, _ = img.shape
-    if w == cfg.RESIZE_IMAGE.WIDTH:
+    if w == cfg.IMAGE.WIDTH:
         return img, 1
-    scale = cfg.RESIZE_IMAGE.WIDTH / w
-    dims = (cfg.RESIZE_IMAGE.WIDTH, int(h * scale))
+    scale = cfg.IMAGE.WIDTH / w
+    dims = (cfg.IMAGE.WIDTH, int(h * scale))
 
     img = cv2.resize(img, dims)
     return img, scale
@@ -153,10 +263,21 @@ def _detect_edges(edge_detection_cfg: CN, gray: np.ndarray) -> np.ndarray:
     if gray.dtype != np.uint8:
         gray = gray / gray.max() * 255
         gray = gray.astype(np.uint8)
-    edges = cv2.Canny(gray,
-                      edge_detection_cfg.LOW_THRESHOLD,
-                      edge_detection_cfg.HIGH_THRESHOLD,
-                      edge_detection_cfg.APERTURE)
+    # Optionally use adaptive thresholding and morphology
+    if getattr(edge_detection_cfg, 'USE_ADAPTIVE', False):
+        thresh = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                       cv2.THRESH_BINARY, 11, 2)
+        kernel = np.ones((3, 3), np.uint8)
+        closed = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
+        edges = cv2.Canny(closed,
+                          edge_detection_cfg.LOW_THRESHOLD,
+                          edge_detection_cfg.HIGH_THRESHOLD,
+                          edge_detection_cfg.APERTURE)
+    else:
+        edges = cv2.Canny(gray,
+                          edge_detection_cfg.LOW_THRESHOLD,
+                          edge_detection_cfg.HIGH_THRESHOLD,
+                          edge_detection_cfg.APERTURE)
     return edges
 
 
@@ -208,7 +329,11 @@ def _cluster_horizontal_and_vertical_lines(lines: np.ndarray):
     Returns:
         tuple: (horizontal_lines, vertical_lines) arrays of lines
     """
+    print("\nAPI Debug - Line Clustering:")
+    print(f"Total lines before clustering: {len(lines)}")
+    
     if lines.shape[0] == 0:
+        print("No lines to cluster!")
         return np.array([]), np.array([])
         
     # Calculate angle differences from horizontal (0) and vertical (pi/2)
@@ -220,6 +345,14 @@ def _cluster_horizontal_and_vertical_lines(lines: np.ndarray):
     is_horizontal = horizontal_diff < vertical_diff
     horizontal_lines = lines[is_horizontal]
     vertical_lines = lines[~is_horizontal]
+    
+    print(f"Lines classified as horizontal: {len(horizontal_lines)}")
+    print(f"Lines classified as vertical: {len(vertical_lines)}")
+    
+    if len(horizontal_lines) == 0:
+        print("Warning: No horizontal lines found after clustering!")
+    if len(vertical_lines) == 0:
+        print("Warning: No vertical lines found after clustering!")
     
     return horizontal_lines, vertical_lines
 
@@ -450,6 +583,168 @@ def _compute_horizontal_borders(cfg: CN, warped: np.ndarray, mask: np.ndarray, s
     return ymin, ymax
 
 
+def _find_best_corners(intersections: np.ndarray) -> np.ndarray:
+    """Find the best 4 corners of the chessboard using RANSAC.
+
+    Args:
+        intersections: The intersections of the horizontal and vertical lines
+
+    Returns:
+        The corners of the chessboard as a 4x2 array of (x, y) coordinates
+    """
+    print("\nAPI Debug - RANSAC Corner Detection:")
+    print(f"Number of intersections to process: {len(intersections)}")
+    
+    if len(intersections) < 4:
+        print("Not enough intersections for RANSAC")
+        raise ChessboardNotLocatedException("not enough intersections for RANSAC")
+    
+    # Find the best 4 corners using RANSAC
+    best_corners = None
+    best_score = float('inf')
+    
+    for _ in range(1000):  # Try 1000 times
+        # Randomly select 4 points
+        indices = np.random.choice(len(intersections), 4, replace=False)
+        corners = intersections[indices]
+        
+        # Calculate the score
+        score = _calculate_corner_score(corners)
+        
+        if score < best_score:
+            best_score = score
+            best_corners = corners
+            print(f"Found better corners with score: {score:.2f}")
+    
+    if best_corners is None:
+        print("RANSAC failed to find viable corners")
+        raise ChessboardNotLocatedException("RANSAC produced no viable results")
+    
+    print("\nFinal RANSAC Results:")
+    print(f"Best score: {best_score:.2f}")
+    print("Best corners:")
+    print(best_corners)
+    
+    return best_corners
+
+
+def _calculate_corner_score(corners: np.ndarray) -> float:
+    """Calculate the score for a set of corners.
+
+    Args:
+        corners: The corners of the chessboard as a 4x2 array of (x, y) coordinates
+
+    Returns:
+        The score for the corners
+    """
+    # Calculate the distances between the corners
+    distances = []
+    for i in range(4):
+        for j in range(i + 1, 4):
+            distances.append(np.linalg.norm(corners[i] - corners[j]))
+    
+    # Calculate the score
+    score = np.std(distances) / np.mean(distances)
+    
+    # Debug print for corner scoring
+    print(f"\nCorner Score Calculation:")
+    print(f"Corner coordinates:")
+    print(corners)
+    print(f"Distances between corners: {[f'{d:.2f}' for d in distances]}")
+    print(f"Score: {score:.2f}")
+    
+    return score
+
+
+def _find_horizontal_and_vertical_lines(lines: np.ndarray) -> typing.Tuple[np.ndarray, np.ndarray]:
+    """Find the horizontal and vertical lines in the image.
+
+    Args:
+        lines: The lines detected in the image
+
+    Returns:
+        A tuple of (horizontal_lines, vertical_lines)
+    """
+    print("\nAPI Debug - Line Classification:")
+    print(f"Total lines before classification: {len(lines)}")
+    
+    # Find the horizontal and vertical lines
+    horizontal_lines = []
+    vertical_lines = []
+    
+    for line in lines:
+        rho, theta = line
+        # Convert theta to degrees for easier debugging
+        theta_deg = np.degrees(theta)
+        print(f"Line: rho={rho:.2f}, theta={theta_deg:.2f}°")
+        
+        # Check if the line is horizontal
+        if abs(theta - np.pi/2) < cfg.LINE_DETECTION.HORIZONTAL_THRESHOLD:
+            horizontal_lines.append(line)
+            print(f"  Classified as horizontal")
+        # Check if the line is vertical
+        elif abs(theta) < cfg.LINE_DETECTION.VERTICAL_THRESHOLD or abs(theta - np.pi) < cfg.LINE_DETECTION.VERTICAL_THRESHOLD:
+            vertical_lines.append(line)
+            print(f"  Classified as vertical")
+        else:
+            print(f"  Skipped (not horizontal or vertical)")
+    
+    horizontal_lines = np.array(horizontal_lines)
+    vertical_lines = np.array(vertical_lines)
+    
+    print(f"\nClassification results:")
+    print(f"Horizontal lines: {len(horizontal_lines)}")
+    print(f"Vertical lines: {len(vertical_lines)}")
+    
+    return horizontal_lines, vertical_lines
+
+
+def _find_intersections(horizontal_lines: np.ndarray, vertical_lines: np.ndarray) -> np.ndarray:
+    """Find the intersections of the horizontal and vertical lines.
+
+    Args:
+        horizontal_lines: The horizontal lines
+        vertical_lines: The vertical lines
+
+    Returns:
+        The intersections of the lines as a Nx2 array of (x, y) coordinates
+    """
+    print("\nAPI Debug - Intersection Detection:")
+    print(f"Finding intersections between {len(horizontal_lines)} horizontal and {len(vertical_lines)} vertical lines")
+    
+    intersections = []
+    for h_line in horizontal_lines:
+        h_rho, h_theta = h_line
+        for v_line in vertical_lines:
+            v_rho, v_theta = v_line
+            
+            # Calculate the intersection
+            A = np.array([
+                [np.cos(h_theta), np.sin(h_theta)],
+                [np.cos(v_theta), np.sin(v_theta)]
+            ])
+            b = np.array([h_rho, v_rho])
+            
+            try:
+                x, y = np.linalg.solve(A, b)
+                # Check if the intersection is within the image bounds
+                if 0 <= x < cfg.IMAGE.WIDTH and 0 <= y < cfg.IMAGE.HEIGHT:
+                    intersections.append([x, y])
+                    print(f"Found intersection at ({x:.2f}, {y:.2f})")
+            except np.linalg.LinAlgError:
+                print(f"Failed to find intersection for lines:")
+                print(f"  Horizontal: rho={h_rho:.2f}, theta={np.degrees(h_theta):.2f}°")
+                print(f"  Vertical: rho={v_rho:.2f}, theta={np.degrees(v_theta):.2f}°")
+    
+    intersections = np.array(intersections)
+    print(f"\nTotal intersections found: {len(intersections)}")
+    if len(intersections) > 0:
+        print("First few intersections:")
+        print(intersections[:5])
+    
+    return intersections
+
+
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
     import argparse
@@ -463,7 +758,7 @@ if __name__ == "__main__":
     cfg = CN.load_yaml_with_base(args.config)
     filename = URI(args.file)
     img = cv2.imread(str(filename))
-    corners = find_corners(cfg, img)
+    corners, debug_images = find_corners(cfg, img)
 
     fig = plt.figure()
     fig.canvas.set_window_title("Corner detection output")

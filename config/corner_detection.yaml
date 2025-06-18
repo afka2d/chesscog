@@ -1,13 +1,38 @@
-RESIZE_IMAGE:
+IMAGE:
   WIDTH: 1200
+  HEIGHT: 1200
+
 EDGE_DETECTION:
+  # Canny edge detection parameters
+  LOW_THRESHOLD: 50
+  HIGH_THRESHOLD: 150
   APERTURE: 3
-  HIGH_THRESHOLD: 200
-  LOW_THRESHOLD: 100
+  USE_ADAPTIVE: true
+
 LINE_DETECTION:
-  THRESHOLD: 300
+  # Hough transform parameters
+  THRESHOLD: 100
+  MIN_LINE_LENGTH: 300  # Increased from 100 to ignore short lines
+  MAX_LINE_GAP: 10  # Decreased from 20 to be more strict about line continuity
+  RHO_TOLERANCE: 20  # Increased from 10 to better group parallel lines
+  THETA_TOLERANCE: 0.1  # Increased from 0.05 to better group similar angles
+  MIN_LINES_PER_CLUSTER: 2  # Decreased from 3 to allow smaller clusters
+  HORIZONTAL_THRESHOLD: 0.2  # Increased from 0.1 to allow more horizontal lines
+  VERTICAL_THRESHOLD: 0.2  # Increased from 0.1 to allow more vertical lines
   DIAGONAL_LINE_ELIMINATION: true
-  DIAGONAL_LINE_ELIMINATION_THRESHOLD_DEGREES: 60
+  DIAGONAL_LINE_ELIMINATION_THRESHOLD_DEGREES: 10
+
+INTERSECTION_DETECTION:
+  MIN_DISTANCE: 30  # Increased from 20 to reduce noise
+  MAX_DISTANCE: 800  # Decreased from 1000 to focus on board area
+
+RANSAC:
+  MAX_ITERATIONS: 2000
+  MIN_SCORE: 0.05
+  MAX_SCORE: 0.8
+  OFFSET_TOLERANCE: 0.2
+  BEST_SOLUTION_TOLERANCE: 0.15
+
 BORDER_REFINEMENT:
   LINE_WIDTH: 3
   WARPED_SQUARE_SIZE: 50
@@ -23,6 +48,3 @@ BORDER_REFINEMENT:
       HIGH_THRESHOLD: 200
       LOW_THRESHOLD: 100
 MAX_OUTLIER_INTERSECTION_POINT_RATIO_PER_LINE: 0.5
-RANSAC:
-  BEST_SOLUTION_TOLERANCE: 0.1
-  OFFSET_TOLERANCE: 0.1
