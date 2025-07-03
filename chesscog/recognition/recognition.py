@@ -25,7 +25,7 @@ import chess
 from chess import Status
 from pathlib import Path
 import torch
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 import functools
 import cv2
 import argparse
@@ -96,6 +96,12 @@ class ChessRecognizer:
 
     def _classify_pieces(self, img: np.ndarray, turn: chess.Color, corners: np.ndarray, occupancy: np.ndarray) -> np.ndarray:
         occupied_squares = np.array(self._squares)[occupancy]
+        
+        # If no squares are occupied, return all None pieces
+        if len(occupied_squares) == 0:
+            all_pieces = np.full(len(self._squares), None, dtype=object)
+            return all_pieces
+        
         warped = create_piece_dataset.warp_chessboard_image(
             img, corners)
         piece_imgs = map(functools.partial(
@@ -135,6 +141,90 @@ class ChessRecognizer:
                     board.set_piece_at(square, piece)
             corners = corners / img_scale
             return board, corners
+
+    def predict_with_debug(self, img: np.ndarray, turn: chess.Color = chess.WHITE) -> typing.Tuple[chess.Board, np.ndarray, dict]:
+        """Perform an inference and return intermediate debug images.
+
+        Args:
+            img (np.ndarray): the input image (RGB)
+            turn (chess.Color, optional): the current player. Defaults to chess.WHITE.
+
+        Returns:
+            typing.Tuple[chess.Board, np.ndarray, dict]: the predicted position, corners, and debug images dict
+        """
+        with torch.no_grad():
+            debug_images = {}
+            img, img_scale = resize_image(self._corner_detection_cfg, img)
+            corners, corner_debug = find_corners(self._corner_detection_cfg, img)
+            debug_images.update(corner_debug)
+            # Warped board image
+            warped_board = create_occupancy_dataset.warp_chessboard_image(img, corners)
+            debug_images['warped_board'] = warped_board.copy()
+            # Occupancy classification
+            occupancy = self._classify_occupancy(img, turn, corners)
+            # Visualize occupancy map
+            debug_images['occupancy_map'] = self._visualize_occupancy_map(warped_board, occupancy, turn)
+            # Piece classification
+            pieces = self._classify_pieces(img, turn, corners, occupancy)
+            # Visualize piece map
+            debug_images['piece_map'] = self._visualize_piece_map(warped_board, pieces, occupancy, turn)
+            # Build board
+            board = chess.Board()
+            board.clear_board()
+            for square, piece in zip(self._squares, pieces):
+                if piece:
+                    board.set_piece_at(square, piece)
+            corners = corners / img_scale
+            return board, corners, debug_images
+
+    def _visualize_occupancy_map(self, warped_board: np.ndarray, occupancy: np.ndarray, turn: chess.Color) -> np.ndarray:
+        # Draw green (occupied) and red (empty) overlays on the warped board
+        vis = warped_board.copy()
+        square_size = vis.shape[0] // 10  # SQUARE_SIZE is 50, board is 8x8, with margin
+        for idx, occ in enumerate(occupancy):
+            rank = chess.square_rank(self._squares[idx])
+            file = chess.square_file(self._squares[idx])
+            if turn == chess.WHITE:
+                row, col = 7 - rank, file
+            else:
+                row, col = rank, 7 - file
+            x1 = int((col + 1) * square_size)
+            y1 = int((row + 1) * square_size)
+            x2 = int((col + 2) * square_size)
+            y2 = int((row + 2) * square_size)
+            color = (0, 255, 0) if occ else (0, 0, 255)
+            cv2.rectangle(vis, (x1, y1), (x2, y2), color, 2)
+        return vis
+
+    def _visualize_piece_map(self, warped_board: np.ndarray, pieces: np.ndarray, occupancy: np.ndarray, turn: chess.Color) -> np.ndarray:
+        # Overlay piece symbols on the warped board
+        vis = warped_board.copy()
+        square_size = vis.shape[0] // 10
+        piece_symbols = {
+            'P': '♙', 'R': '♖', 'N': '♘', 'B': '♗', 'Q': '♕', 'K': '♔',
+            'p': '♟', 'r': '♜', 'n': '♞', 'b': '♝', 'q': '♛', 'k': '♚'
+        }
+        for idx, piece in enumerate(pieces):
+            if piece is not None:
+                rank = chess.square_rank(self._squares[idx])
+                file = chess.square_file(self._squares[idx])
+                if turn == chess.WHITE:
+                    row, col = 7 - rank, file
+                else:
+                    row, col = rank, 7 - file
+                x = int((col + 1.5) * square_size)
+                y = int((row + 1.2) * square_size)
+                symbol = piece_symbols.get(piece.symbol(), piece.symbol())
+                pil_img = Image.fromarray(vis)
+                draw = ImageDraw.Draw(pil_img)
+                try:
+                    font = ImageFont.truetype("/System/Library/Fonts/Arial.ttf", int(square_size * 0.8))
+                except:
+                    font = ImageFont.load_default()
+                color = (0, 0, 0) if piece.color == chess.WHITE else (255, 255, 255)
+                draw.text((x, y), symbol, fill=color, font=font)
+                vis = np.array(pil_img)
+        return vis
 
 
 class TimedChessRecognizer(ChessRecognizer):
