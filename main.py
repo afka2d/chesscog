@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
 from chesscog.recognition.recognition import ChessRecognizer
+from chesscog.recognition.enhanced_recognition import EnhancedChessRecognizer
 from chesscog.corner_detection import find_corners
 from chesscog.corner_detection.detect_corners import CN
 from chesscog.occupancy_classifier.create_dataset import warp_chessboard_image, crop_square as crop_occupancy_square
@@ -43,16 +44,25 @@ app.add_middleware(
 # Global variables for loaded models
 cfg = None
 recognizer = None
+enhanced_recognizer = None
 
 def load_models():
     """Load the chess recognition models."""
-    global cfg, recognizer
+    global cfg, recognizer, enhanced_recognizer
     try:
         logger.info("Loading corner detection configuration...")
         cfg = CN.load_yaml_with_base("config/corner_detection.yaml")
         
         logger.info("Loading chess recognizer...")
         recognizer = ChessRecognizer(Path("models"))
+        
+        logger.info("Loading enhanced chess recognizer...")
+        try:
+            enhanced_recognizer = EnhancedChessRecognizer(Path("models"))
+            logger.info("Enhanced recognizer loaded successfully")
+        except Exception as e:
+            logger.warning(f"Failed to load enhanced recognizer, using standard: {e}")
+            enhanced_recognizer = None
         
         logger.info("Models loaded successfully")
         return True
@@ -529,45 +539,54 @@ async def recognize_chess_position_with_corners(
         logger.info(f"Processing image with manual corners: {image.filename}")
         logger.info(f"Corner coordinates: {corner_coords}")
         
-        # Use the recognizer's predict_with_debug method but skip corner detection
+        # Use enhanced recognizer if available, otherwise fall back to standard
+        current_recognizer = enhanced_recognizer if enhanced_recognizer is not None else recognizer
+        
         try:
-            # Create debug images dictionary starting with the resized image
-            debug_images = {}
-            
-            # Resize image for processing
-            resized_img = cv2.resize(img, (800, 600))
-            debug_images['resized'] = resized_img.copy()
-            
-            # Use the provided corners directly
             logger.info("Using manually provided corner coordinates")
             
-            # Warp the chessboard using the provided corners
-            from chesscog.occupancy_classifier.create_dataset import warp_chessboard_image
-            warped_board = warp_chessboard_image(img, corners_array)
-            debug_images['warped_board'] = warped_board.copy()
-            
-            # Classify occupancy
-            logger.info("Classifying occupancy...")
-            occupancy = recognizer._classify_occupancy(img, turn, corners_array)
-            debug_images['occupancy_map'] = recognizer._visualize_occupancy_map(warped_board, occupancy, turn)
-            
-            # Classify pieces
-            logger.info("Classifying pieces...")
-            pieces = recognizer._classify_pieces(img, turn, corners_array, occupancy)
-            debug_images['piece_map'] = recognizer._visualize_piece_map(warped_board, pieces, occupancy, turn)
-            
-            # Create the chess board
-            logger.info("Creating chess board...")
-            board = chess.Board()
-            board.clear()
-            
-            # Place pieces on the board
-            for square, piece in zip(recognizer._squares, pieces):
-                if piece is not None:
-                    board.set_piece_at(square, piece)
-            
-            # Set the turn
-            board.turn = turn
+            # Use enhanced recognition if available
+            if enhanced_recognizer is not None:
+                logger.info("Using enhanced occupancy detection...")
+                board, corners_used, debug_images = enhanced_recognizer.predict_with_debug_enhanced(
+                    img, turn, corners_array
+                )
+            else:
+                logger.info("Using standard recognition...")
+                # Create debug images dictionary starting with the resized image
+                debug_images = {}
+                
+                # Resize image for processing
+                resized_img = cv2.resize(img, (800, 600))
+                debug_images['resized'] = resized_img.copy()
+                
+                # Warp the chessboard using the provided corners
+                from chesscog.occupancy_classifier.create_dataset import warp_chessboard_image
+                warped_board = warp_chessboard_image(img, corners_array)
+                debug_images['warped_board'] = warped_board.copy()
+                
+                # Classify occupancy
+                logger.info("Classifying occupancy...")
+                occupancy = current_recognizer._classify_occupancy(img, turn, corners_array)
+                debug_images['occupancy_map'] = current_recognizer._visualize_occupancy_map(warped_board, occupancy, turn)
+                
+                # Classify pieces
+                logger.info("Classifying pieces...")
+                pieces = current_recognizer._classify_pieces(img, turn, corners_array, occupancy)
+                debug_images['piece_map'] = current_recognizer._visualize_piece_map(warped_board, pieces, occupancy, turn)
+                
+                # Create the chess board
+                logger.info("Creating chess board...")
+                board = chess.Board()
+                board.clear()
+                
+                # Place pieces on the board
+                for square, piece in zip(current_recognizer._squares, pieces):
+                    if piece is not None:
+                        board.set_piece_at(square, piece)
+                
+                # Set the turn
+                board.turn = turn
             
             # Generate results
             fen = board.fen()
@@ -634,6 +653,116 @@ async def recognize_chess_position_with_corners(
     except Exception as e:
         logger.error(f"Unexpected error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+@app.post("/analyze_occupancy_with_corners")
+async def analyze_occupancy_with_corners(
+    image: UploadFile = File(...),
+    corners: str = Form(...),  # JSON string of corner coordinates
+    color: str = "white"
+):
+    """
+    Analyze occupancy detection with enhanced statistics using manual corners.
+    
+    Args:
+        image: Chess board image (JPEG or PNG)
+        corners: JSON string of corner coordinates [[x1,y1], [x2,y2], [x3,y3], [x4,y4]]
+        color: Color to play as ("white" or "black")
+    
+    Returns:
+        JSON response with detailed occupancy analysis and statistics
+    """
+    if enhanced_recognizer is None:
+        raise HTTPException(status_code=503, detail="Enhanced recognition not available")
+    
+    try:
+        # Validate and parse input
+        if not image.filename:
+            raise HTTPException(status_code=400, detail="No image file provided")
+        
+        # Parse corner coordinates
+        try:
+            import json
+            corner_coords = json.loads(corners)
+            if not isinstance(corner_coords, list) or len(corner_coords) != 4:
+                raise ValueError("Corners must be a list of 4 coordinate pairs")
+            corners_array = np.array(corner_coords, dtype=np.float32)
+            if corners_array.shape != (4, 2):
+                raise ValueError("Each corner must have 2 coordinates (x, y)")
+        except (json.JSONDecodeError, ValueError) as e:
+            raise HTTPException(status_code=400, detail=f"Invalid corner coordinates: {str(e)}")
+        
+        # Read and validate image
+        img_bytes = await image.read()
+        if not img_bytes:
+            raise HTTPException(status_code=400, detail="Empty image file")
+        
+        # Decode image
+        nparr = np.frombuffer(img_bytes, np.uint8)
+        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        if img is None:
+            raise HTTPException(status_code=400, detail="Failed to decode image")
+        
+        # Validate color parameter
+        if color.lower() not in ["white", "black"]:
+            raise HTTPException(status_code=400, detail="Color must be 'white' or 'black'")
+        
+        turn = chess.WHITE if color.lower() == "white" else chess.BLACK
+        
+        logger.info(f"Analyzing occupancy with enhanced detection: {image.filename}")
+        
+        # Get enhanced occupancy statistics
+        stats = enhanced_recognizer.get_occupancy_statistics(img, turn, corners_array)
+        
+        # Perform standard recognition for comparison
+        board, corners_used, debug_images = enhanced_recognizer.predict_with_debug_enhanced(
+            img, turn, corners_array
+        )
+        
+        # Convert debug images to base64
+        debug_images_base64 = {}
+        for key, img_data in debug_images.items():
+            encoded = encode_image(img_data, 800, 600)
+            if encoded:
+                debug_images_base64[key] = encoded
+        
+        # Generate results
+        fen = board.fen()
+        ascii_board = str(board)
+        lichess_url = f"https://lichess.org/editor/{fen}?color={color.lower()}"
+        legal = board.is_valid()
+        
+        logger.info(f"Enhanced occupancy analysis complete: {stats['overall_stats']}")
+        
+        return JSONResponse(
+            content={
+                "fen": fen,
+                "ascii": ascii_board,
+                "lichess_url": lichess_url,
+                "legal_position": legal,
+                "occupancy_statistics": stats,
+                "debug_images": debug_images_base64,
+                "corners": corners_array.tolist(),
+                "processing_time": time.time(),
+                "image_info": {
+                    "filename": image.filename,
+                    "content_type": image.content_type,
+                    "size_bytes": len(img_bytes),
+                    "shape": img.shape
+                },
+                "enhancement_info": {
+                    "enhanced_detection_used": True,
+                    "confidence_threshold": enhanced_recognizer.confidence_threshold,
+                    "total_squares_analyzed": 64,
+                    "analysis_type": "enhanced_occupancy_detection"
+                }
+            }
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Enhanced occupancy analysis failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn

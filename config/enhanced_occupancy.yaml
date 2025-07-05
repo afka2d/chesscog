@@ -1,0 +1,75 @@
+# Enhanced Occupancy Detection Configuration
+
+# Detection parameters
+DETECTION:
+  # Confidence threshold for occupancy classification
+  CONFIDENCE_THRESHOLD: 0.6
+  
+  # Margin ratio for adaptive cropping
+  MARGIN_RATIO: 0.3
+  
+  # Multi-scale detection scales
+  SCALES: [0.8, 1.0, 1.2]
+  
+  # Statistical analysis thresholds
+  STATISTICAL:
+    EMPTY_THRESHOLD: 0.15
+    EDGE_WEIGHT: 0.4
+    TEXTURE_WEIGHT: 0.3
+    COLOR_WEIGHT: 0.3
+  
+  # Ensemble method weights
+  ENSEMBLE:
+    MODEL_WEIGHT: 0.7
+    STATISTICAL_WEIGHT: 0.3
+    UNCERTAIN_THRESHOLD: 0.55
+
+# Image preprocessing parameters
+PREPROCESSING:
+  # Contrast enhancement factor
+  CONTRAST_ENHANCEMENT: 1.2
+  
+  # Sharpness enhancement factor
+  SHARPNESS_ENHANCEMENT: 1.1
+  
+  # Brightness enhancement factor
+  BRIGHTNESS_ENHANCEMENT: 1.05
+  
+  # Gaussian blur radius for denoising
+  DENOISE_RADIUS: 0.5
+  
+  # Warped image enhancement blur radius
+  WARP_DENOISE_RADIUS: 0.3
+
+# Adaptive cropping parameters
+ADAPTIVE_CROPPING:
+  # Perspective factor for distant squares
+  PERSPECTIVE_FACTOR: 0.2
+  
+  # Base width increase for edge squares
+  BASE_WIDTH_INCREASE: 0.1
+  
+  # Additional width increase per square from edge
+  WIDTH_INCREASE_STEP: 0.05
+
+# Validation parameters
+VALIDATION:
+  # Whether to validate occupancy-piece consistency
+  VALIDATE_CONSISTENCY: true
+  
+  # Minimum crop size for analysis
+  MIN_CROP_SIZE: 10
+  
+  # Maximum number of retries for failed crops
+  MAX_RETRIES: 3
+
+# Debug and logging
+DEBUG:
+  # Enable detailed logging
+  VERBOSE_LOGGING: false
+  
+  # Save intermediate images for debugging
+  SAVE_DEBUG_IMAGES: true
+  
+  # Debug image output directory
+  DEBUG_OUTPUT_DIR: "debug_enhanced_occupancy"
