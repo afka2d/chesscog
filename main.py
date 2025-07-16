@@ -260,6 +260,147 @@ def create_square_grid_visualization(warped_img, occupancy_results, piece_result
         logger.error(f"Failed to create square grid visualization: {e}")
         return None
 
+def create_board_focus_debug_image(img: np.ndarray, corners: np.ndarray) -> np.ndarray:
+    """
+    Create a debug image showing the original image with the board area clearly visible
+    and everything outside the detected corners blurred.
+    
+    Args:
+        img: Original image
+        corners: Corner coordinates as numpy array of shape (4, 2)
+    
+    Returns:
+        Debug image with board area clear and outside area blurred
+    """
+    try:
+        # Create a copy of the original image
+        debug_img = img.copy()
+        
+        # Sort corners to ensure consistent order
+        from chesscog.core import sort_corner_points
+        sorted_corners = sort_corner_points(corners)
+        
+        # Create a mask for the board area
+        mask = np.zeros(img.shape[:2], dtype=np.uint8)
+        
+        # Convert corners to integer coordinates for the mask
+        corner_points = sorted_corners.astype(np.int32)
+        
+        # Fill the board area with white (255)
+        cv2.fillPoly(mask, [corner_points], 255)
+        
+        # Create a blurred version of the entire image
+        blurred_img = cv2.GaussianBlur(img, (51, 51), 0)
+        
+        # Combine the original image (board area) with blurred image (outside area)
+        # Where mask is 255 (board area), use original image
+        # Where mask is 0 (outside area), use blurred image
+        debug_img = np.where(mask[:, :, np.newaxis] == 255, img, blurred_img)
+        
+        # Draw corner points and board outline for clarity
+        for i, corner in enumerate(sorted_corners):
+            x, y = int(corner[0]), int(corner[1])
+            # Draw corner points
+            cv2.circle(debug_img, (x, y), 8, (0, 255, 0), -1)  # Green filled circle
+            cv2.circle(debug_img, (x, y), 8, (0, 0, 0), 2)    # Black outline
+            # Add corner labels
+            cv2.putText(debug_img, str(i+1), (x+10, y-10), 
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+        
+        # Draw board outline
+        cv2.polylines(debug_img, [corner_points], True, (0, 255, 0), 3)
+        
+        return debug_img.astype(np.uint8)
+        
+    except Exception as e:
+        logger.error(f"Failed to create board focus debug image: {e}")
+        return img  # Return original image if processing fails
+
+def generate_position_description(board, color_perspective="white"):
+    """
+    Generate a human-readable description of the chess position.
+    
+    Args:
+        board: chess.Board object
+        color_perspective: "white" or "black" perspective
+    
+    Returns:
+        str: Human-readable description of the position
+    """
+    piece_map = board.piece_map()
+    
+    if not piece_map:
+        return "The board is empty with no pieces."
+    
+    # Group pieces by color and type
+    white_pieces = {}
+    black_pieces = {}
+    
+    for square, piece in piece_map.items():
+        square_name = chess.square_name(square)
+        piece_symbol = piece.symbol()
+        piece_name = {
+            'P': 'Pawn', 'R': 'Rook', 'N': 'Knight', 
+            'B': 'Bishop', 'Q': 'Queen', 'K': 'King'
+        }.get(piece_symbol.upper(), piece_symbol)
+        
+        if piece.color:  # White piece
+            if piece_name not in white_pieces:
+                white_pieces[piece_name] = []
+            white_pieces[piece_name].append(square_name)
+        else:  # Black piece
+            if piece_name not in black_pieces:
+                black_pieces[piece_name] = []
+            black_pieces[piece_name].append(square_name)
+    
+    # Build description
+    description_parts = []
+    
+    # White pieces
+    if white_pieces:
+        white_desc = []
+        for piece_name, squares in white_pieces.items():
+            if len(squares) == 1:
+                white_desc.append(f"White {piece_name} on {squares[0]}")
+            else:
+                white_desc.append(f"White {piece_name}s on {', '.join(squares)}")
+        description_parts.append("White pieces: " + "; ".join(white_desc))
+    
+    # Black pieces
+    if black_pieces:
+        black_desc = []
+        for piece_name, squares in black_pieces.items():
+            if len(squares) == 1:
+                black_desc.append(f"Black {piece_name} on {squares[0]}")
+            else:
+                black_desc.append(f"Black {piece_name}s on {', '.join(squares)}")
+        description_parts.append("Black pieces: " + "; ".join(black_desc))
+    
+    # Add turn information
+    turn = "White" if board.turn else "Black"
+    description_parts.append(f"{turn} to move")
+    
+    # Add castling rights
+    castling_rights = []
+    if board.has_kingside_castling_rights(chess.WHITE):
+        castling_rights.append("White kingside")
+    if board.has_queenside_castling_rights(chess.WHITE):
+        castling_rights.append("White queenside")
+    if board.has_kingside_castling_rights(chess.BLACK):
+        castling_rights.append("Black kingside")
+    if board.has_queenside_castling_rights(chess.BLACK):
+        castling_rights.append("Black queenside")
+    
+    if castling_rights:
+        description_parts.append(f"Castling available: {', '.join(castling_rights)}")
+    
+    # Add en passant if available
+    if board.ep_square:
+        ep_square = chess.square_name(board.ep_square)
+        description_parts.append(f"En passant available on {ep_square}")
+    
+    return ". ".join(description_parts) + "."
+
 @app.on_event("startup")
 async def startup_event():
     """Initialize models on startup."""
@@ -362,6 +503,9 @@ async def recognize_chess_position(
         lichess_url = f"https://lichess.org/editor/{fen}?color={color}"
         legal = board.is_valid()
         
+        # Generate human-readable description
+        position_description = generate_position_description(board, color)
+        
         logger.info(f"Recognition successful: FEN={fen}, Legal={legal}")
         
         return JSONResponse(
@@ -370,6 +514,7 @@ async def recognize_chess_position(
                 "ascii": ascii_board,
                 "lichess_url": lichess_url,
                 "legal_position": legal,
+                "position_description": position_description,
                 "debug_images": debug_images_base64,
                 "debug_image_paths": debug_image_paths,
                 "corners": corners.tolist() if corners is not None else None,
@@ -384,7 +529,8 @@ async def recognize_chess_position(
                     "corner_detection": "Completed",
                     "board_warping": "Completed",
                     "position_detection": "Completed",
-                    "visualization": "Completed"
+                    "visualization": "Completed",
+                    "description_generation": "Completed"
                 }
             }
         )
@@ -546,6 +692,10 @@ async def recognize_chess_position_with_corners(
             warped_board = warp_chessboard_image(img, corners_array)
             debug_images['warped_board'] = warped_board.copy()
             
+            # Create board focus debug image (clear board, blurred outside)
+            board_focus_img = create_board_focus_debug_image(img, corners_array)
+            debug_images['board_focus'] = board_focus_img
+            
             # Classify occupancy
             logger.info("Classifying occupancy...")
             occupancy = recognizer._classify_occupancy(img, turn, corners_array)
@@ -635,12 +785,134 @@ async def recognize_chess_position_with_corners(
         logger.error(f"Unexpected error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
+@app.post("/recognize_chess_position_with_description")
+async def recognize_chess_position_with_description(
+    image: UploadFile = File(...), 
+    color: str = "white",
+    debug_image_width: int = 800,
+    debug_image_height: int = 600
+):
+    """
+    Recognize chess position from uploaded image and provide human-readable description.
+    
+    Args:
+        image: Chess board image (JPEG or PNG)
+        color: Color to play as ("white" or "black")
+        debug_image_width: Maximum width for debug images
+        debug_image_height: Maximum height for debug images
+    
+    Returns:
+        JSON with FEN notation, ASCII board, Lichess URL, legal position status, 
+        human-readable description, and debug images
+    """
+    if not cfg or not recognizer:
+        raise HTTPException(status_code=503, detail="Models not loaded")
+    
+    # Validate image type
+    if image.content_type not in ["image/jpeg", "image/png", "image/jpg"]:
+        raise HTTPException(
+            status_code=400, 
+            detail="Unsupported image type. Use JPEG or PNG."
+        )
+    
+    try:
+        # Read and decode image
+        img_bytes = await image.read()
+        np_arr = np.frombuffer(img_bytes, np.uint8)
+        img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+        
+        if img is None:
+            raise HTTPException(status_code=400, detail="Failed to decode image")
+        
+        logger.info(f"Processing image: {image.filename}, shape: {img.shape}")
+        
+        # Validate color parameter
+        if color not in ["white", "black"]:
+            color = "white"  # Default to white
+        
+        chess_color = chess.WHITE if color == "white" else chess.BLACK
+        
+        # Perform recognition with debug images
+        logger.info("Performing chess recognition with debug images...")
+        board, corners, debug_images = recognizer.predict_with_debug(img, chess_color)
+        
+        # Save debug images to disk
+        import os
+        debug_output_dir = "debug_outputs"
+        os.makedirs(debug_output_dir, exist_ok=True)
+        
+        # Save each debug image (overwriting previous versions)
+        debug_image_paths = {}
+        
+        for key, img in debug_images.items():
+            if isinstance(img, np.ndarray):
+                filename = f"{key}.png"
+                filepath = os.path.join(debug_output_dir, filename)
+                cv2.imwrite(filepath, img)
+                debug_image_paths[key] = filepath
+                logger.info(f"Saved debug image: {filepath}")
+        
+        # Convert debug images to base64
+        debug_images_base64 = {}
+        for key, img in debug_images.items():
+            encoded = encode_image(img, debug_image_width, debug_image_height)
+            if encoded:
+                debug_images_base64[key] = encoded
+        
+        # Generate results
+        fen = board.fen()
+        ascii_board = str(board)
+        lichess_url = f"https://lichess.org/editor/{fen}?color={color}"
+        legal = board.is_valid()
+        
+        # Generate human-readable description
+        position_description = generate_position_description(board, color)
+        
+        logger.info(f"Recognition successful: FEN={fen}, Legal={legal}")
+        
+        return JSONResponse(
+            content={
+                "fen": fen,
+                "ascii": ascii_board,
+                "lichess_url": lichess_url,
+                "legal_position": legal,
+                "position_description": position_description,
+                "debug_images": debug_images_base64,
+                "debug_image_paths": debug_image_paths,
+                "corners": corners.tolist() if corners is not None else None,
+                "processing_time": time.time(),
+                "image_info": {
+                    "filename": image.filename,
+                    "content_type": image.content_type,
+                    "size_bytes": len(img_bytes),
+                    "shape": img.shape
+                },
+                "debug_info": {
+                    "corner_detection": "Completed",
+                    "board_warping": "Completed",
+                    "position_detection": "Completed",
+                    "visualization": "Completed",
+                    "description_generation": "Completed"
+                }
+            }
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Recognition failed: {str(e)}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Recognition failed: {str(e)}"
+        )
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
         app, 
         host="0.0.0.0", 
-        port=8000,
+        port=8001,
         log_level="info",
         access_log=True
     )

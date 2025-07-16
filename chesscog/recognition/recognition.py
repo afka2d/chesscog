@@ -157,6 +157,14 @@ class ChessRecognizer:
             img, img_scale = resize_image(self._corner_detection_cfg, img)
             corners, corner_debug = find_corners(self._corner_detection_cfg, img)
             debug_images.update(corner_debug)
+            
+            # Create board focus debug image (clear board, blurred outside)
+            # We need to use the original image dimensions for the board focus
+            original_img = cv2.resize(img, (img.shape[1] // img_scale, img.shape[0] // img_scale))
+            original_corners = corners / img_scale
+            board_focus_img = self._create_board_focus_debug_image(original_img, original_corners)
+            debug_images['board_focus'] = board_focus_img
+            
             # Warped board image
             warped_board = create_occupancy_dataset.warp_chessboard_image(img, corners)
             debug_images['warped_board'] = warped_board.copy()
@@ -226,7 +234,61 @@ class ChessRecognizer:
                 vis = np.array(pil_img)
         return vis
 
-
+    def _create_board_focus_debug_image(self, img: np.ndarray, corners: np.ndarray) -> np.ndarray:
+        """
+        Create a debug image showing the original image with the board area clearly visible
+        and everything outside the detected corners blurred.
+        
+        Args:
+            img: Original image
+            corners: Corner coordinates as numpy array of shape (4, 2)
+        
+        Returns:
+            Debug image with board area clear and outside area blurred
+        """
+        try:
+            # Create a copy of the original image
+            debug_img = img.copy()
+            
+            # Sort corners to ensure consistent order
+            from chesscog.core import sort_corner_points
+            sorted_corners = sort_corner_points(corners)
+            
+            # Create a mask for the board area
+            mask = np.zeros(img.shape[:2], dtype=np.uint8)
+            
+            # Convert corners to integer coordinates for the mask
+            corner_points = sorted_corners.astype(np.int32)
+            
+            # Fill the board area with white (255)
+            cv2.fillPoly(mask, [corner_points], 255)
+            
+            # Create a blurred version of the entire image
+            blurred_img = cv2.GaussianBlur(img, (51, 51), 0)
+            
+            # Combine the original image (board area) with blurred image (outside area)
+            # Where mask is 255 (board area), use original image
+            # Where mask is 0 (outside area), use blurred image
+            debug_img = np.where(mask[:, :, np.newaxis] == 255, img, blurred_img)
+            
+            # Draw corner points and board outline for clarity
+            for i, corner in enumerate(sorted_corners):
+                x, y = int(corner[0]), int(corner[1])
+                # Draw corner points
+                cv2.circle(debug_img, (x, y), 8, (0, 255, 0), -1)  # Green filled circle
+                cv2.circle(debug_img, (x, y), 8, (0, 0, 0), 2)    # Black outline
+                # Add corner labels
+                cv2.putText(debug_img, str(i+1), (x+10, y-10), 
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+            
+            # Draw board outline
+            cv2.polylines(debug_img, [corner_points], True, (0, 255, 0), 3)
+            
+            return debug_img.astype(np.uint8)
+            
+        except Exception as e:
+            print(f"Failed to create board focus debug image: {e}")
+            return img  # Return original image if processing fails
 class TimedChessRecognizer(ChessRecognizer):
     """A subclass of :class:`ChessRecognizer` that additionally records the time taken for each step of the pipeline during inference.
     """
