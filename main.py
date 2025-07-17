@@ -401,6 +401,112 @@ def generate_position_description(board, color_perspective="white"):
     
     return ". ".join(description_parts) + "."
 
+def parse_cursor_description_to_board(description: str) -> chess.Board:
+    """
+    Parse Cursor's image description to build a chess board.
+    
+    Args:
+        description: The image description from Cursor (e.g., "White Queen on e2, Black Pawn on e4...")
+    
+    Returns:
+        chess.Board: The constructed chess board
+    """
+    board = chess.Board()
+    board.clear()
+    
+    # Common piece mappings
+    piece_map = {
+        'white pawn': chess.Piece(chess.PAWN, chess.WHITE),
+        'white rook': chess.Piece(chess.ROOK, chess.WHITE),
+        'white knight': chess.Piece(chess.KNIGHT, chess.WHITE),
+        'white bishop': chess.Piece(chess.BISHOP, chess.WHITE),
+        'white queen': chess.Piece(chess.QUEEN, chess.WHITE),
+        'white king': chess.Piece(chess.KING, chess.WHITE),
+        'black pawn': chess.Piece(chess.PAWN, chess.BLACK),
+        'black rook': chess.Piece(chess.ROOK, chess.BLACK),
+        'black knight': chess.Piece(chess.KNIGHT, chess.BLACK),
+        'black bishop': chess.Piece(chess.BISHOP, chess.BLACK),
+        'black queen': chess.Piece(chess.QUEEN, chess.BLACK),
+        'black king': chess.Piece(chess.KING, chess.BLACK),
+        # Handle variations in naming
+        'pawn': chess.Piece(chess.PAWN, chess.BLACK),  # Default to black if color not specified
+        'rook': chess.Piece(chess.ROOK, chess.BLACK),
+        'knight': chess.Piece(chess.KNIGHT, chess.BLACK),
+        'bishop': chess.Piece(chess.BISHOP, chess.BLACK),
+        'queen': chess.Piece(chess.QUEEN, chess.BLACK),
+        'king': chess.Piece(chess.KING, chess.BLACK),
+    }
+    
+    # Square mapping
+    square_map = {
+        'a1': chess.A1, 'a2': chess.A2, 'a3': chess.A3, 'a4': chess.A4,
+        'a5': chess.A5, 'a6': chess.A6, 'a7': chess.A7, 'a8': chess.A8,
+        'b1': chess.B1, 'b2': chess.B2, 'b3': chess.B3, 'b4': chess.B4,
+        'b5': chess.B5, 'b6': chess.B6, 'b7': chess.B7, 'b8': chess.B8,
+        'c1': chess.C1, 'c2': chess.C2, 'c3': chess.C3, 'c4': chess.C4,
+        'c5': chess.C5, 'c6': chess.C6, 'c7': chess.C7, 'c8': chess.C8,
+        'd1': chess.D1, 'd2': chess.D2, 'd3': chess.D3, 'd4': chess.D4,
+        'd5': chess.D5, 'd6': chess.D6, 'd7': chess.D7, 'd8': chess.D8,
+        'e1': chess.E1, 'e2': chess.E2, 'e3': chess.E3, 'e4': chess.E4,
+        'e5': chess.E5, 'e6': chess.E6, 'e7': chess.E7, 'e8': chess.E8,
+        'f1': chess.F1, 'f2': chess.F2, 'f3': chess.F3, 'f4': chess.F4,
+        'f5': chess.F5, 'f6': chess.F6, 'f7': chess.F7, 'f8': chess.F8,
+        'g1': chess.G1, 'g2': chess.G2, 'g3': chess.G3, 'g4': chess.G4,
+        'g5': chess.G5, 'g6': chess.G6, 'g7': chess.G7, 'g8': chess.G8,
+        'h1': chess.H1, 'h2': chess.H2, 'h3': chess.H3, 'h4': chess.H4,
+        'h5': chess.H5, 'h6': chess.H6, 'h7': chess.H7, 'h8': chess.H8,
+    }
+    
+    # Parse the description
+    description_lower = description.lower()
+    
+    # Look for piece patterns like "White Queen on e2" or "Black Pawn on e4"
+    import re
+    
+    # Pattern to match: "color piece on square"
+    patterns = [
+        r'(\w+)\s+(pawn|rook|knight|bishop|queen|king)\s+on\s+([a-h][1-8])',
+        r'(\w+)\s+(pawn|rook|knight|bishop|queen|king)\s+positioned\s+on\s+([a-h][1-8])',
+        r'(\w+)\s+(pawn|rook|knight|bishop|queen|king)\s+at\s+([a-h][1-8])',
+        r'a\s+(\w+)\s+(pawn|rook|knight|bishop|queen|king)\s+is\s+positioned\s+on\s+([a-h][1-8])',
+        r'a\s+(\w+)\s+(pawn|rook|knight|bishop|queen|king)\s+is\s+on\s+([a-h][1-8])',
+    ]
+    
+    pieces_found = []
+    
+    for pattern in patterns:
+        matches = re.findall(pattern, description_lower)
+        for match in matches:
+            color, piece_type, square = match
+            piece_key = f"{color} {piece_type}"
+            
+            if piece_key in piece_map and square in square_map:
+                pieces_found.append((piece_map[piece_key], square_map[square]))
+    
+    # Also look for patterns without explicit color (like "pawn on e4")
+    simple_patterns = [
+        r'(pawn|rook|knight|bishop|queen|king)\s+on\s+([a-h][1-8])',
+        r'(pawn|rook|knight|bishop|queen|king)\s+positioned\s+on\s+([a-h][1-8])',
+        r'(pawn|rook|knight|bishop|queen|king)\s+at\s+([a-h][1-8])',
+    ]
+    
+    for pattern in simple_patterns:
+        matches = re.findall(pattern, description_lower)
+        for match in matches:
+            piece_type, square = match
+            piece_key = piece_type  # Use default color (black)
+            
+            if piece_key in piece_map and square in square_map:
+                pieces_found.append((piece_map[piece_key], square_map[square]))
+    
+    # Place pieces on the board
+    for piece, square in pieces_found:
+        board.set_piece_at(square, piece)
+    
+    logger.info(f"Parsed {len(pieces_found)} pieces from description: {pieces_found}")
+    
+    return board
+
 @app.on_event("startup")
 async def startup_event():
     """Initialize models on startup."""
@@ -902,6 +1008,215 @@ async def recognize_chess_position_with_description(
     except Exception as e:
         logger.error(f"Recognition failed: {str(e)}")
         logger.error(traceback.format_exc())
+        # Fallback for any recognition error - always provide a description
+        logger.info(f"Recognition failed with error: {str(e)}. Providing fallback response with description.")
+        try:
+            fallback_board = chess.Board()
+            fallback_board.clear()
+            position_description = generate_position_description(fallback_board, color)
+            
+            # Determine error type and suggestion
+            error_type = "recognition_error"
+            suggestion = "Try uploading a clearer image of the chess board."
+            
+            if "resize" in str(e).lower() or "dsize" in str(e).lower():
+                error_type = "resize_error"
+                suggestion = "Try uploading an image with different dimensions or format."
+            elif "opencv" in str(e).lower():
+                error_type = "opencv_error"
+                suggestion = "Try uploading a different image format (JPEG or PNG)."
+            elif "corner" in str(e).lower():
+                error_type = "corner_detection_error"
+                suggestion = "Try uploading an image with a clearer view of the chess board corners."
+            
+            return JSONResponse(
+                content={
+                    "fen": fallback_board.fen(),
+                    "ascii": str(fallback_board),
+                    "lichess_url": f"https://lichess.org/editor/{fallback_board.fen()}?color={color}",
+                    "legal_position": fallback_board.is_valid(),
+                    "position_description": f"⚠️ Recognition failed: {str(e)}. {position_description}",
+                    "debug_images": {},
+                    "debug_image_paths": {},
+                    "corners": None,
+                    "processing_time": time.time(),
+                    "image_info": {
+                        "filename": image.filename,
+                        "content_type": image.content_type,
+                        "size_bytes": len(img_bytes),
+                        "shape": img.shape if img is not None else None
+                    },
+                    "debug_info": {
+                        "corner_detection": "Failed",
+                        "board_warping": "Skipped",
+                        "position_detection": "Failed",
+                        "visualization": "Skipped",
+                        "description_generation": "Completed (Fallback)"
+                    },
+                    "error": {
+                        "type": error_type,
+                        "message": str(e),
+                        "suggestion": suggestion
+                    }
+                }
+            )
+        except Exception as fallback_error:
+            logger.error(f"Fallback response also failed: {fallback_error}")
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Recognition failed: {str(e)}"
+        )
+
+@app.post("/recognize_chess_position_with_cursor_description")
+async def recognize_chess_position_with_cursor_description(
+    image: UploadFile = File(...),
+    cursor_description: str = Form(...),  # The description from Cursor's image analysis
+    color: str = "white",
+    debug_image_width: int = 800,
+    debug_image_height: int = 600
+):
+    """
+    Recognize chess position using Cursor's image description.
+    
+    Args:
+        image: Chess board image (JPEG or PNG)
+        cursor_description: The image description from Cursor's built-in analysis
+        color: Color to play as ("white" or "black")
+        debug_image_width: Maximum width for debug images
+        debug_image_height: Maximum height for debug images
+    
+    Returns:
+        JSON with FEN notation, ASCII board, Lichess URL, legal position status, 
+        human-readable description, and debug images
+    """
+    if not cfg or not recognizer:
+        raise HTTPException(status_code=503, detail="Models not loaded")
+    
+    # Validate image type
+    if image.content_type not in ["image/jpeg", "image/png", "image/jpg"]:
+        raise HTTPException(
+            status_code=400, 
+            detail="Unsupported image type. Use JPEG or PNG."
+        )
+    
+    try:
+        # Read and decode image
+        img_bytes = await image.read()
+        np_arr = np.frombuffer(img_bytes, np.uint8)
+        img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+        
+        if img is None:
+            raise HTTPException(status_code=400, detail="Failed to decode image")
+        
+        logger.info(f"Processing image: {image.filename}, shape: {img.shape}")
+        logger.info(f"Cursor description: {cursor_description}")
+        
+        # Validate color parameter
+        if color not in ["white", "black"]:
+            color = "white"  # Default to white
+        
+        # Parse Cursor's description to build the board
+        logger.info("Parsing Cursor's image description to build chess board...")
+        board = parse_cursor_description_to_board(cursor_description)
+        
+        # Generate results
+        fen = board.fen()
+        ascii_board = str(board)
+        lichess_url = f"https://lichess.org/editor/{fen}?color={color}"
+        legal = board.is_valid()
+        
+        # Generate human-readable description
+        position_description = generate_position_description(board, color)
+        
+        # Create debug images (optional - could show the original image)
+        debug_images_base64 = {}
+        debug_image_paths = {}
+        
+        # Encode the original image as a debug image
+        encoded_original = encode_image(img, debug_image_width, debug_image_height)
+        if encoded_original:
+            debug_images_base64['original_image'] = encoded_original
+        
+        logger.info(f"Recognition successful: FEN={fen}, Legal={legal}")
+        
+        return JSONResponse(
+            content={
+                "fen": fen,
+                "ascii": ascii_board,
+                "lichess_url": lichess_url,
+                "legal_position": legal,
+                "position_description": position_description,
+                "cursor_description": cursor_description,
+                "debug_images": debug_images_base64,
+                "debug_image_paths": debug_image_paths,
+                "corners": None,  # No corner detection with this method
+                "processing_time": time.time(),
+                "image_info": {
+                    "filename": image.filename,
+                    "content_type": image.content_type,
+                    "size_bytes": len(img_bytes),
+                    "shape": img.shape
+                },
+                "debug_info": {
+                    "corner_detection": "Skipped (using Cursor description)",
+                    "board_warping": "Skipped",
+                    "position_detection": "Completed via Cursor description",
+                    "visualization": "Completed",
+                    "description_generation": "Completed"
+                },
+                "method": "cursor_description_parsing"
+            }
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Recognition failed: {str(e)}")
+        logger.error(traceback.format_exc())
+        
+        # Fallback for any error
+        logger.info(f"Recognition failed with error: {str(e)}. Providing fallback response with description.")
+        try:
+            fallback_board = chess.Board()
+            fallback_board.clear()
+            position_description = generate_position_description(fallback_board, color)
+            
+            return JSONResponse(
+                content={
+                    "fen": fallback_board.fen(),
+                    "ascii": str(fallback_board),
+                    "lichess_url": f"https://lichess.org/editor/{fallback_board.fen()}?color={color}",
+                    "legal_position": fallback_board.is_valid(),
+                    "position_description": f"⚠️ Recognition failed: {str(e)}. {position_description}",
+                    "cursor_description": cursor_description,
+                    "debug_images": {},
+                    "debug_image_paths": {},
+                    "corners": None,
+                    "processing_time": time.time(),
+                    "image_info": {
+                        "filename": image.filename,
+                        "content_type": image.content_type,
+                        "size_bytes": len(img_bytes),
+                        "shape": img.shape if img is not None else None
+                    },
+                    "debug_info": {
+                        "corner_detection": "Failed",
+                        "board_warping": "Skipped",
+                        "position_detection": "Failed",
+                        "visualization": "Skipped",
+                        "description_generation": "Completed (Fallback)"
+                    },
+                    "error": {
+                        "type": "cursor_parsing_error",
+                        "message": str(e),
+                        "suggestion": "Check the Cursor description format and try again."
+                    },
+                    "method": "cursor_description_parsing_fallback"
+                }
+            )
+        except Exception as fallback_error:
+            logger.error(f"Fallback response also failed: {fallback_error}")
+        
         raise HTTPException(
             status_code=500, 
             detail=f"Recognition failed: {str(e)}"
