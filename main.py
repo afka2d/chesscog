@@ -463,27 +463,67 @@ def parse_cursor_description_to_board(description: str) -> chess.Board:
     # Look for piece patterns like "White Queen on e2" or "Black Pawn on e4"
     import re
     
-    # Pattern to match: "color piece on square"
+    # Enhanced patterns to handle Cursor's bullet-pointed format
     patterns = [
+        # Original patterns
         r'(\w+)\s+(pawn|rook|knight|bishop|queen|king)\s+on\s+([a-h][1-8])',
         r'(\w+)\s+(pawn|rook|knight|bishop|queen|king)\s+positioned\s+on\s+([a-h][1-8])',
         r'(\w+)\s+(pawn|rook|knight|bishop|queen|king)\s+at\s+([a-h][1-8])',
         r'a\s+(\w+)\s+(pawn|rook|knight|bishop|queen|king)\s+is\s+positioned\s+on\s+([a-h][1-8])',
         r'a\s+(\w+)\s+(pawn|rook|knight|bishop|queen|king)\s+is\s+on\s+([a-h][1-8])',
+        # New patterns for Cursor's bullet-pointed format
+        r'a\s+(\w+)\s+(pawn|rook|knight|bishop|queen|king)\s+is\s+positioned\s+on\s+square\s+([a-h][1-8])',
+        r'a\s+(\w+)\s+(pawn|rook|knight|bishop|queen|king)\s+is\s+positioned\s+on\s+([a-h][1-8])',
+        r'(\w+)\s+(pawn|rook|knight|bishop|queen|king)\s+is\s+positioned\s+on\s+square\s+([a-h][1-8])',
+        r'(\w+)\s+(pawn|rook|knight|bishop|queen|king)\s+is\s+positioned\s+on\s+([a-h][1-8])',
+        # Handle "lying on its side" or other variations
+        r'a\s+(\w+)\s+(pawn|rook|knight|bishop|queen|king)\s+is\s+lying\s+on\s+its\s+side\s+on\s+square\s+([a-h][1-8])',
+        r'a\s+(\w+)\s+(pawn|rook|knight|bishop|queen|king)\s+is\s+lying\s+on\s+its\s+side\s+on\s+([a-h][1-8])',
+        # Additional patterns for "positioned upright" format
+        r'a\s+(\w+)\s+(pawn|rook|knight|bishop|queen|king)\s+is\s+positioned\s+upright\s+on\s+square\s+([a-h][1-8])',
+        r'a\s+(\w+)\s+(pawn|rook|knight|bishop|queen|king)\s+positioned\s+upright\s+on\s+square\s+([a-h][1-8])',
     ]
     
     pieces_found = []
+    found_squares = set()  # Track squares to avoid duplicates
     
-    for pattern in patterns:
-        matches = re.findall(pattern, description_lower)
-        for match in matches:
-            color, piece_type, square = match
-            piece_key = f"{color} {piece_type}"
+    # Process each line separately to handle bullet points
+    lines = description.split('\n')
+    for line in lines:
+        line = line.strip()
+        if not line or line.startswith('#'):  # Skip empty lines and comments
+            continue
             
-            if piece_key in piece_map and square in square_map:
-                pieces_found.append((piece_map[piece_key], square_map[square]))
+        # Remove bullet points and extra whitespace
+        line = re.sub(r'^[-•*]\s*', '', line)  # Remove bullet points
+        # Also handle asterisks with different spacing patterns
+        line = re.sub(r'^\*\s*', '', line)  # Remove asterisk bullet points
+        # Remove bold formatting **text** -> text
+        line = re.sub(r'\*\*([^*]+)\*\*', r'\1', line)  # Remove **bold** formatting
+        line = line.strip()
+        
+        if not line:
+            continue
+            
+        line_lower = line.lower()
+        
+        # Try all patterns on this line
+        for pattern in patterns:
+            matches = re.findall(pattern, line_lower)
+            for match in matches:
+                color, piece_type, square = match
+                piece_key = f"{color} {piece_type}"
+                
+                if piece_key in piece_map and square in square_map:
+                    # Only add if we haven't already found a piece on this square
+                    if square not in found_squares:
+                        pieces_found.append((piece_map[piece_key], square_map[square]))
+                        found_squares.add(square)
+                        logger.info(f"Found piece: {piece_key} on {square}")
+                    else:
+                        logger.info(f"Skipping duplicate piece on {square}")
     
-    # Also look for patterns without explicit color (like "pawn on e4")
+    # Also look for patterns without explicit color (like "pawn on e4") in the full description
     simple_patterns = [
         r'(pawn|rook|knight|bishop|queen|king)\s+on\s+([a-h][1-8])',
         r'(pawn|rook|knight|bishop|queen|king)\s+positioned\s+on\s+([a-h][1-8])',
@@ -498,6 +538,7 @@ def parse_cursor_description_to_board(description: str) -> chess.Board:
             
             if piece_key in piece_map and square in square_map:
                 pieces_found.append((piece_map[piece_key], square_map[square]))
+                logger.info(f"Found piece (no color): {piece_key} on {square}")
     
     # Place pieces on the board
     for piece, square in pieces_found:
@@ -1071,9 +1112,7 @@ async def recognize_chess_position_with_description(
 async def recognize_chess_position_with_cursor_description(
     image: UploadFile = File(...),
     cursor_description: str = Form(...),  # The description from Cursor's image analysis
-    color: str = "white",
-    debug_image_width: int = 800,
-    debug_image_height: int = 600
+    color: str = "white"
 ):
     """
     Recognize chess position using Cursor's image description.
@@ -1082,12 +1121,9 @@ async def recognize_chess_position_with_cursor_description(
         image: Chess board image (JPEG or PNG)
         cursor_description: The image description from Cursor's built-in analysis
         color: Color to play as ("white" or "black")
-        debug_image_width: Maximum width for debug images
-        debug_image_height: Maximum height for debug images
     
     Returns:
-        JSON with FEN notation, ASCII board, Lichess URL, legal position status, 
-        human-readable description, and debug images
+        JSON with FEN notation and 2D board mapping
     """
     if not cfg or not recognizer:
         raise HTTPException(status_code=503, detail="Models not loaded")
@@ -1119,6 +1155,9 @@ async def recognize_chess_position_with_cursor_description(
         logger.info("Parsing Cursor's image description to build chess board...")
         board = parse_cursor_description_to_board(cursor_description)
         
+        # Count pieces found
+        piece_count = len([piece for piece in board.piece_map().values()])
+        
         # Generate results
         fen = board.fen()
         ascii_board = str(board)
@@ -1128,43 +1167,36 @@ async def recognize_chess_position_with_cursor_description(
         # Generate human-readable description
         position_description = generate_position_description(board, color)
         
-        # Create debug images (optional - could show the original image)
-        debug_images_base64 = {}
-        debug_image_paths = {}
+        # Add parsing feedback to description
+        if piece_count == 0:
+            position_description = f"⚠️ No pieces were parsed from the Cursor description. The description may not contain recognizable piece locations, or the format may need adjustment. {position_description}"
+        else:
+            position_description = f"✅ Successfully parsed {piece_count} pieces from Cursor's description. {position_description}"
         
-        # Encode the original image as a debug image
-        encoded_original = encode_image(img, debug_image_width, debug_image_height)
-        if encoded_original:
-            debug_images_base64['original_image'] = encoded_original
+        # No debug images needed - just return FEN and 2D board mapping
         
         logger.info(f"Recognition successful: FEN={fen}, Legal={legal}")
+        
+        # Create 2D board mapping
+        board_2d = []
+        for rank in range(8):
+            row = []
+            for file in range(8):
+                square = chess.square(file, 7 - rank)  # Convert to chess square (a1 is bottom-left)
+                piece = board.piece_at(square)
+                if piece:
+                    # Use standard chess notation: K, Q, R, B, N, P for white; k, q, r, b, n, p for black
+                    piece_symbol = piece.symbol()
+                    row.append(piece_symbol)
+                else:
+                    row.append('.')  # Empty square
+            board_2d.append(row)
         
         return JSONResponse(
             content={
                 "fen": fen,
-                "ascii": ascii_board,
-                "lichess_url": lichess_url,
-                "legal_position": legal,
-                "position_description": position_description,
-                "cursor_description": cursor_description,
-                "debug_images": debug_images_base64,
-                "debug_image_paths": debug_image_paths,
-                "corners": None,  # No corner detection with this method
-                "processing_time": time.time(),
-                "image_info": {
-                    "filename": image.filename,
-                    "content_type": image.content_type,
-                    "size_bytes": len(img_bytes),
-                    "shape": img.shape
-                },
-                "debug_info": {
-                    "corner_detection": "Skipped (using Cursor description)",
-                    "board_warping": "Skipped",
-                    "position_detection": "Completed via Cursor description",
-                    "visualization": "Completed",
-                    "description_generation": "Completed"
-                },
-                "method": "cursor_description_parsing"
+                "board_2d": board_2d,  # 2D array representation of the board
+                "pieces_found": piece_count
             }
         )
         
@@ -1181,37 +1213,14 @@ async def recognize_chess_position_with_cursor_description(
             fallback_board.clear()
             position_description = generate_position_description(fallback_board, color)
             
+            # Create empty 2D board mapping for fallback
+            board_2d = [['.' for _ in range(8)] for _ in range(8)]
+            
             return JSONResponse(
                 content={
                     "fen": fallback_board.fen(),
-                    "ascii": str(fallback_board),
-                    "lichess_url": f"https://lichess.org/editor/{fallback_board.fen()}?color={color}",
-                    "legal_position": fallback_board.is_valid(),
-                    "position_description": f"⚠️ Recognition failed: {str(e)}. {position_description}",
-                    "cursor_description": cursor_description,
-                    "debug_images": {},
-                    "debug_image_paths": {},
-                    "corners": None,
-                    "processing_time": time.time(),
-                    "image_info": {
-                        "filename": image.filename,
-                        "content_type": image.content_type,
-                        "size_bytes": len(img_bytes),
-                        "shape": img.shape if img is not None else None
-                    },
-                    "debug_info": {
-                        "corner_detection": "Failed",
-                        "board_warping": "Skipped",
-                        "position_detection": "Failed",
-                        "visualization": "Skipped",
-                        "description_generation": "Completed (Fallback)"
-                    },
-                    "error": {
-                        "type": "cursor_parsing_error",
-                        "message": str(e),
-                        "suggestion": "Check the Cursor description format and try again."
-                    },
-                    "method": "cursor_description_parsing_fallback"
+                    "board_2d": board_2d,  # Empty 2D array representation
+                    "pieces_found": 0
                 }
             )
         except Exception as fallback_error:
