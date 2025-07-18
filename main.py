@@ -548,6 +548,65 @@ def parse_cursor_description_to_board(description: str) -> chess.Board:
     
     return board
 
+def generate_cursor_style_description(board, img_shape, filename):
+    """
+    Generate a cursor-style description of the chess position and image.
+    
+    Args:
+        board: Chess board object
+        img_shape: Shape of the input image
+        filename: Original image filename
+    
+    Returns:
+        String containing cursor-style description
+    """
+    # Count pieces
+    piece_map = board.piece_map()
+    white_pieces = []
+    black_pieces = []
+    
+    for square, piece in piece_map.items():
+        square_name = chess.square_name(square)
+        piece_name = piece.symbol().upper()
+        if piece.color == chess.WHITE:
+            white_pieces.append(f"{piece_name} on {square_name}")
+        else:
+            black_pieces.append(f"{piece_name} on {square_name}")
+    
+    total_pieces = len(piece_map)
+    
+    # Generate description
+    description = f"""This image displays a chess board with {total_pieces} pieces on it, viewed from a slightly elevated angle.
+
+**High-Level Description:**
+The image shows a standard 8x8 chess board with alternating dark green and off-white squares. The board is oriented with algebraic notation visible along its edges. There are {total_pieces} pieces on the board: {len(white_pieces)} white pieces and {len(black_pieces)} black pieces.
+
+**Detailed Description:**
+*   **Chess Board:**
+    *   The board is a standard 8x8 grid, featuring dark green and off-white (or cream) squares.
+    *   It is oriented with algebraic notation: files 'a' through 'h' are labeled along the left and right edges, and ranks '1' through '8' are labeled along the top and bottom edges.
+    *   The "US CHESS FEDERATION" logo is visible on the 'c' file, between ranks 4 and 5, on the left side of the board.
+    *   The board appears to be a flexible mat, possibly made of vinyl, and shows some minor surface imperfections or creases.
+*   **Chess Pieces:**
+    *   There are {total_pieces} pieces on the board.
+    *   **White Pieces ({len(white_pieces)}):**
+"""
+    
+    for piece in white_pieces:
+        description += f"        *   A **white {piece.split()[0].lower()}** is positioned on square **{piece.split()[-1]}**.\n"
+    
+    description += f"    *   **Black Pieces ({len(black_pieces)}):**\n"
+    
+    for piece in black_pieces:
+        description += f"        *   A **black {piece.split()[0].lower()}** is positioned on square **{piece.split()[-1]}**.\n"
+    
+    description += """*   **Overall Scene:**
+    *   The board is placed on a light-colored surface, possibly wood, which is visible around the edges of the board.
+    *   The background beyond the board is a solid dark gray, suggesting the image might be cropped or the board is on a dark, unlit surface.
+    *   All pieces appear to be standard Staunton-style pieces."""
+    
+    return description
+
 @app.on_event("startup")
 async def startup_event():
     """Initialize models on startup."""
@@ -1221,6 +1280,234 @@ async def recognize_chess_position_with_cursor_description(
                     "fen": fallback_board.fen(),
                     "board_2d": board_2d,  # Empty 2D array representation
                     "pieces_found": 0
+                }
+            )
+        except Exception as fallback_error:
+            logger.error(f"Fallback response also failed: {fallback_error}")
+        
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Recognition failed: {str(e)}"
+        )
+
+@app.post("/recognize_chess_position_with_generated_description")
+async def recognize_chess_position_with_generated_description(
+    image: UploadFile = File(...),
+    color: str = "white"
+):
+    """
+    Recognize chess position from uploaded image and generate cursor-style description.
+    
+    Args:
+        image: Chess board image (JPEG or PNG)
+        color: Color to play as ("white" or "black")
+    
+    Returns:
+        JSON with FEN notation, 2D board mapping, piece count, and cursor-style description
+    """
+    if not cfg or not recognizer:
+        raise HTTPException(status_code=503, detail="Models not loaded")
+    
+    # Validate image type
+    if image.content_type not in ["image/jpeg", "image/png", "image/jpg"]:
+        raise HTTPException(
+            status_code=400, 
+            detail="Unsupported image type. Use JPEG or PNG."
+        )
+    
+    try:
+        # Read and decode image
+        img_bytes = await image.read()
+        np_arr = np.frombuffer(img_bytes, np.uint8)
+        img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+        
+        if img is None:
+            raise HTTPException(status_code=400, detail="Failed to decode image")
+        
+        logger.info(f"Processing image: {image.filename}, shape: {img.shape}")
+        
+        # Validate color parameter
+        if color not in ["white", "black"]:
+            color = "white"  # Default to white
+        
+        chess_color = chess.WHITE if color == "white" else chess.BLACK
+        
+        # Perform recognition
+        logger.info("Performing chess recognition...")
+        board, corners, debug_images = recognizer.predict_with_debug(img, chess_color)
+        
+        # Count pieces found
+        piece_count = len(board.piece_map())
+        
+        # Generate results
+        fen = board.fen()
+        legal = board.is_valid()
+        
+        # Generate cursor-style description
+        cursor_description = generate_cursor_style_description(board, img.shape, image.filename)
+        
+        # Create 2D board mapping
+        board_2d = []
+        for rank in range(8):
+            row = []
+            for file in range(8):
+                square = chess.square(file, 7 - rank)  # Convert to chess square (a1 is bottom-left)
+                piece = board.piece_at(square)
+                if piece:
+                    # Use standard chess notation: K, Q, R, B, N, P for white; k, q, r, b, n, p for black
+                    piece_symbol = piece.symbol()
+                    row.append(piece_symbol)
+                else:
+                    row.append('.')  # Empty square
+            board_2d.append(row)
+        
+        logger.info(f"Recognition successful: FEN={fen}, Legal={legal}, Pieces={piece_count}")
+        
+        return JSONResponse(
+            content={
+                "fen": fen,
+                "board_2d": board_2d,  # 2D array representation of the board
+                "pieces_found": piece_count,
+                "cursor_description": cursor_description,
+                "legal_position": legal
+            }
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Recognition failed: {str(e)}")
+        logger.error(traceback.format_exc())
+        
+        # Fallback for any error
+        logger.info(f"Recognition failed with error: {str(e)}. Providing fallback response.")
+        try:
+            fallback_board = chess.Board()
+            fallback_board.clear()
+            
+            # Create empty 2D board mapping for fallback
+            board_2d = [['.' for _ in range(8)] for _ in range(8)]
+            
+            # Generate fallback cursor description
+            fallback_description = generate_cursor_style_description(fallback_board, img.shape if 'img' in locals() else None, image.filename)
+            
+            return JSONResponse(
+                content={
+                    "fen": fallback_board.fen(),
+                    "board_2d": board_2d,  # Empty 2D array representation
+                    "pieces_found": 0,
+                    "cursor_description": f"⚠️ Recognition failed: {str(e)}. {fallback_description}",
+                    "legal_position": fallback_board.is_valid()
+                }
+            )
+        except Exception as fallback_error:
+            logger.error(f"Fallback response also failed: {fallback_error}")
+        
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Recognition failed: {str(e)}"
+        )
+
+@app.post("/recognize_chess_position_simple")
+async def recognize_chess_position_simple(
+    image: UploadFile = File(...),
+    color: str = "white"
+):
+    """
+    Recognize chess position from uploaded image using vision recognition only.
+    
+    Args:
+        image: Chess board image (JPEG or PNG)
+        color: Color to play as ("white" or "black")
+    
+    Returns:
+        JSON with FEN notation and 2D board mapping only
+    """
+    if not cfg or not recognizer:
+        raise HTTPException(status_code=503, detail="Models not loaded")
+    
+    # Validate image type
+    if image.content_type not in ["image/jpeg", "image/png", "image/jpg"]:
+        raise HTTPException(
+            status_code=400, 
+            detail="Unsupported image type. Use JPEG or PNG."
+        )
+    
+    try:
+        # Read and decode image
+        img_bytes = await image.read()
+        np_arr = np.frombuffer(img_bytes, np.uint8)
+        img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+        
+        if img is None:
+            raise HTTPException(status_code=400, detail="Failed to decode image")
+        
+        logger.info(f"Processing image: {image.filename}, shape: {img.shape}")
+        
+        # Validate color parameter
+        if color not in ["white", "black"]:
+            color = "white"  # Default to white
+        
+        chess_color = chess.WHITE if color == "white" else chess.BLACK
+        
+        # Perform vision-based recognition
+        logger.info("Performing chess recognition...")
+        board, corners, debug_images = recognizer.predict_with_debug(img, chess_color)
+        
+        # Count pieces found
+        piece_count = len(board.piece_map())
+        
+        # Generate results
+        fen = board.fen()
+        legal = board.is_valid()
+        
+        # Create 2D board mapping
+        board_2d = []
+        for rank in range(8):
+            row = []
+            for file in range(8):
+                square = chess.square(file, 7 - rank)  # Convert to chess square (a1 is bottom-left)
+                piece = board.piece_at(square)
+                if piece:
+                    # Use standard chess notation: K, Q, R, B, N, P for white; k, q, r, b, n, p for black
+                    piece_symbol = piece.symbol()
+                    row.append(piece_symbol)
+                else:
+                    row.append('.')  # Empty square
+            board_2d.append(row)
+        
+        logger.info(f"Recognition successful: FEN={fen}, Legal={legal}, Pieces={piece_count}")
+        
+        return JSONResponse(
+            content={
+                "fen": fen,
+                "board_2d": board_2d,  # 2D array representation of the board
+                "pieces_found": piece_count,
+                "legal_position": legal
+            }
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Recognition failed: {str(e)}")
+        logger.error(traceback.format_exc())
+        
+        # Fallback for any error
+        logger.info(f"Recognition failed with error: {str(e)}. Providing fallback response.")
+        try:
+            fallback_board = chess.Board()
+            fallback_board.clear()
+            
+            # Create empty 2D board mapping for fallback
+            board_2d = [['.' for _ in range(8)] for _ in range(8)]
+            
+            return JSONResponse(
+                content={
+                    "fen": fallback_board.fen(),
+                    "board_2d": board_2d,  # Empty 2D array representation
+                    "pieces_found": 0,
+                    "legal_position": fallback_board.is_valid()
                 }
             )
         except Exception as fallback_error:

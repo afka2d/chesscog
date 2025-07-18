@@ -160,7 +160,7 @@ class ChessRecognizer:
             
             # Create board focus debug image (clear board, blurred outside)
             # We need to use the original image dimensions for the board focus
-            original_img = cv2.resize(img, (img.shape[1] // img_scale, img.shape[0] // img_scale))
+            original_img = cv2.resize(img, (int(img.shape[1] // img_scale), int(img.shape[0] // img_scale)))
             original_corners = corners / img_scale
             board_focus_img = self._create_board_focus_debug_image(original_img, original_corners)
             debug_images['board_focus'] = board_focus_img
