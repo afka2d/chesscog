@@ -1,7 +1,7 @@
 _BASE_: config://_classifier_base.yaml
 
 DATASET:
-  PATH: data://pieces
+  PATH: grey_background_dataset/pieces
   CLASSES:
     - black_bishop
     - black_king

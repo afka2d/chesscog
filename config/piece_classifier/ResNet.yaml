@@ -1,4 +1,5 @@
 DATASET:
+  PATH: grey_background_dataset/pieces
   TRANSFORMS:
     CENTER_CROP: null
     RESIZE:

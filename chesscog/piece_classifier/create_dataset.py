@@ -141,15 +141,61 @@ def create_dataset(input_dir: Path = RENDERS_DIR, output_dir: Path = OUT_DIR):
 
     for subset in ("train", "val", "test"):
         _create_folders(subset, output_dir)
-        samples = list((input_dir / subset).glob("*.png"))
-        for i, img_file in enumerate(samples):
-            if len(samples) > 100 and i % int(len(samples) / 100) == 0:
-                print(f"{i / len(samples)*100:.0f}%")
-            _extract_squares_from_sample(
-                img_file.stem, subset, input_dir, output_dir)
+        # Support .png, .jpg, .jpeg
+        samples = []
+        for ext in ("*.png", "*.jpg", "*.jpeg", "*.JPG", "*.JPEG"):
+            samples.extend((input_dir / subset).glob(ext))
+        for img_path in samples:
+            print(f"\n[DEBUG] Processing image: {img_path}")
+            ann_path = input_dir.parent / "annotations" / subset / (img_path.stem + ".json")
+            if not ann_path.exists():
+                print(f"[DEBUG] Annotation file not found: {ann_path}")
+                continue
+            with open(ann_path, "r") as f:
+                ann = json.load(f)
+            fen = ann.get("fen", None)
+            corners = ann.get("corners", None)
+            if not fen:
+                print(f"[DEBUG] No FEN in annotation: {ann_path}")
+                continue
+            if not corners or len(corners) != 4:
+                print(f"[DEBUG] Invalid corners in annotation: {corners}")
+                continue
+            print(f"[DEBUG] FEN: {fen}")
+            print(f"[DEBUG] Corners: {corners}")
+
+            # Load the image
+            img = cv2.imread(str(img_path))
+            if img is None:
+                print(f"[DEBUG] Could not load image: {img_path}")
+                continue
+            # Compute perspective transform to get unwarped board
+            try:
+                src = np.array(corners, dtype=np.float32)
+                board_size = 800  # px
+                dst = np.array([[0,0],[board_size-1,0],[board_size-1,board_size-1],[0,board_size-1]], dtype=np.float32)
+                M = cv2.getPerspectiveTransform(src, dst)
+                unwarped = cv2.warpPerspective(img, M, (board_size, board_size))
+            except Exception as e:
+                print(f"[DEBUG] Failed to warp image: {e}")
+                continue
+
+            board = chess.Board(fen)
+            for square, piece in board.piece_map().items():
+                try:
+                    piece_img = crop_square(unwarped, square, ann["white_turn"])
+                    with Image.fromarray(piece_img, "RGB") as piece_img:
+                        piece_img.save(output_dir / subset / piece_name(piece) /
+                                       f"{img_path.stem}_{chess.square_name(square)}.png")
+                    print(f"[DEBUG] Extracted piece: {piece_name(piece)}, {chess.square_name(square)}")
+                except Exception as e:
+                    print(f"[DEBUG] Skipped piece: {chess.square_name(square)} due to error: {e}")
 
 
 if __name__ == "__main__":
-    argparse.ArgumentParser(
-        description="Create the dataset for piece classification.").parse_args()
-    create_dataset()
+    parser = argparse.ArgumentParser(
+        description="Create the dataset for piece classification.")
+    parser.add_argument("input_dir", nargs="?", default=RENDERS_DIR, help="Input directory (default: data://render)")
+    parser.add_argument("output_dir", nargs="?", default=OUT_DIR, help="Output directory (default: data://pieces)")
+    args = parser.parse_args()
+    create_dataset(Path(args.input_dir), Path(args.output_dir))

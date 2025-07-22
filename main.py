@@ -13,11 +13,15 @@ import chess
 from PIL import Image, ImageDraw, ImageFont
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+import torch
+import torch.nn.functional as F
+from torchvision import transforms
 
 from chesscog.recognition.recognition import ChessRecognizer
 from chesscog.corner_detection import find_corners
 from chesscog.corner_detection.detect_corners import CN
 from chesscog.occupancy_classifier.create_dataset import warp_chessboard_image, crop_square as crop_occupancy_square
+from chesscog.piece_classifier import create_dataset as create_piece_dataset
 from chesscog.piece_classifier.create_dataset import crop_square as crop_piece_square
 from chesscog.core import sort_corner_points
 
@@ -43,16 +47,153 @@ app.add_middleware(
 # Global variables for loaded models
 cfg = None
 recognizer = None
+custom_piece_model = None
+custom_piece_transforms = None
+
+class CustomChessRecognizer(ChessRecognizer):
+    """Custom ChessRecognizer that uses the newly trained ResNet piece classifier."""
+    
+    def __init__(self, classifiers_folder: Path, custom_piece_model_path: Path):
+        """Initialize with custom piece classifier model."""
+        super().__init__(classifiers_folder)
+        
+        # Load custom piece classifier
+        self._load_custom_piece_classifier(custom_piece_model_path)
+    
+    def _load_custom_piece_classifier(self, model_path: Path):
+        """Load the custom trained ResNet piece classifier."""
+        try:
+            # Load the trained model
+            self._custom_piece_model = torch.load(str(model_path), map_location=torch.device('cpu'), weights_only=False)
+            self._custom_piece_model.eval()
+            
+            # Define piece classes in the order they were trained
+            self._custom_piece_classes = [
+                'black_bishop', 'black_king', 'black_knight', 'black_pawn', 'black_queen', 'black_rook',
+                'white_bishop', 'white_king', 'white_knight', 'white_pawn', 'white_queen', 'white_rook'
+            ]
+            
+            # Define transforms to match training
+            self._custom_piece_transforms = transforms.Compose([
+                transforms.Resize((100, 200)),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+            ])
+            
+            logger.info(f"Custom piece classifier loaded from {model_path}")
+            
+        except Exception as e:
+            logger.error(f"Failed to load custom piece classifier: {e}")
+            raise
+    
+    def _classify_occupancy(self, img: np.ndarray, turn: chess.Color, corners: np.ndarray) -> np.ndarray:
+        """Override occupancy classification to add debug output."""
+        occupancy = super()._classify_occupancy(img, turn, corners)
+        
+        # Debug occupancy detection
+        occupied_count = np.sum(occupancy)
+        logger.info(f"Occupancy detection: Found {occupied_count} occupied squares out of 64")
+        if occupied_count > 0:
+            occupied_squares = [chess.square_name(sq) for sq, occ in zip(self._squares, occupancy) if occ]
+            logger.info(f"Occupied squares: {occupied_squares}")
+        
+        return occupancy
+    
+    def _classify_pieces(self, img: np.ndarray, turn: chess.Color, corners: np.ndarray, occupancy: np.ndarray) -> np.ndarray:
+        """Override piece classification to use custom model."""
+        occupied_squares = np.array(self._squares)[occupancy]
+        
+        logger.info(f"Custom piece classifier: Found {len(occupied_squares)} occupied squares")
+        
+        # If no squares are occupied, return all None pieces
+        if len(occupied_squares) == 0:
+            logger.info("No occupied squares found, returning empty board")
+            all_pieces = np.full(len(self._squares), None, dtype=object)
+            return all_pieces
+        
+        # Warp the image to get the board
+        warped = create_piece_dataset.warp_chessboard_image(img, corners)
+        logger.info(f"Warped board shape: {warped.shape}")
+        
+        # Process each occupied square
+        pieces = []
+        for i, square in enumerate(occupied_squares):
+            try:
+                # Crop the square
+                piece_img = crop_piece_square(warped, square, turn)
+                logger.info(f"Square {chess.square_name(square)}: cropped image shape {piece_img.shape}")
+                
+                # Convert to PIL and apply transforms
+                piece_pil = Image.fromarray(piece_img, 'RGB')
+                piece_tensor = self._custom_piece_transforms(piece_pil).unsqueeze(0)
+                
+                # Get prediction
+                with torch.no_grad():
+                    output = self._custom_piece_model(piece_tensor)
+                    probabilities = F.softmax(output, dim=1)
+                    predicted_class = torch.argmax(probabilities, dim=1).item()
+                    confidence = probabilities[0][predicted_class].item()
+                
+                # Convert class name to chess piece
+                piece_name = self._custom_piece_classes[predicted_class]
+                piece = self._piece_name_to_chess_piece(piece_name)
+                
+                logger.info(f"Square {chess.square_name(square)}: predicted {piece_name} with confidence {confidence:.3f}")
+                
+                # Only accept predictions with reasonable confidence
+                if confidence > 0.1:  # Lower threshold for debugging
+                    pieces.append(piece)
+                    logger.info(f"Accepted piece {piece_name} on {chess.square_name(square)}")
+                else:
+                    pieces.append(None)
+                    logger.info(f"Rejected piece {piece_name} on {chess.square_name(square)} due to low confidence")
+                    
+            except Exception as e:
+                logger.warning(f"Failed to classify piece on square {chess.square_name(square)}: {e}")
+                pieces.append(None)
+        
+        # Create full array with pieces only on occupied squares
+        all_pieces = np.full(len(self._squares), None, dtype=object)
+        all_pieces[occupancy] = pieces
+        
+        accepted_pieces = [p for p in pieces if p is not None]
+        logger.info(f"Custom piece classifier: Accepted {len(accepted_pieces)} pieces out of {len(occupied_squares)} occupied squares")
+        
+        return all_pieces
+    
+    def _piece_name_to_chess_piece(self, piece_name: str) -> chess.Piece:
+        """Convert piece name to chess.Piece object."""
+        piece_mapping = {
+            'black_bishop': chess.Piece(chess.BISHOP, chess.BLACK),
+            'black_king': chess.Piece(chess.KING, chess.BLACK),
+            'black_knight': chess.Piece(chess.KNIGHT, chess.BLACK),
+            'black_pawn': chess.Piece(chess.PAWN, chess.BLACK),
+            'black_queen': chess.Piece(chess.QUEEN, chess.BLACK),
+            'black_rook': chess.Piece(chess.ROOK, chess.BLACK),
+            'white_bishop': chess.Piece(chess.BISHOP, chess.WHITE),
+            'white_king': chess.Piece(chess.KING, chess.WHITE),
+            'white_knight': chess.Piece(chess.KNIGHT, chess.WHITE),
+            'white_pawn': chess.Piece(chess.PAWN, chess.WHITE),
+            'white_queen': chess.Piece(chess.QUEEN, chess.WHITE),
+            'white_rook': chess.Piece(chess.ROOK, chess.WHITE),
+        }
+        return piece_mapping.get(piece_name, None)
 
 def load_models():
-    """Load the chess recognition models."""
+    """Load the chess recognition models with custom piece classifier."""
     global cfg, recognizer
     try:
         logger.info("Loading corner detection configuration...")
         cfg = CN.load_yaml_with_base("config/corner_detection.yaml")
         
-        logger.info("Loading chess recognizer...")
-        recognizer = ChessRecognizer(Path("models"))
+        logger.info("Loading custom chess recognizer with trained ResNet model...")
+        custom_model_path = Path("runs/piece_classifier/ResNet/ResNet.pt")
+        
+        if not custom_model_path.exists():
+            logger.warning("Custom piece classifier not found, falling back to default")
+            recognizer = ChessRecognizer(Path("models"))
+        else:
+            recognizer = CustomChessRecognizer(Path("models"), custom_model_path)
         
         logger.info("Models loaded successfully")
         return True
@@ -1174,11 +1315,11 @@ async def recognize_chess_position_with_cursor_description(
     color: str = "white"
 ):
     """
-    Recognize chess position using Cursor's image description.
+    Recognize chess position using custom trained model (keeping same interface).
     
     Args:
         image: Chess board image (JPEG or PNG)
-        cursor_description: The image description from Cursor's built-in analysis
+        cursor_description: The image description from Cursor's built-in analysis (kept for compatibility)
         color: Color to play as ("white" or "black")
     
     Returns:
@@ -1210,9 +1351,11 @@ async def recognize_chess_position_with_cursor_description(
         if color not in ["white", "black"]:
             color = "white"  # Default to white
         
-        # Parse Cursor's description to build the board
-        logger.info("Parsing Cursor's image description to build chess board...")
-        board = parse_cursor_description_to_board(cursor_description)
+        chess_color = chess.WHITE if color == "white" else chess.BLACK
+        
+        # Use the custom trained model for recognition
+        logger.info("Performing chess recognition with custom trained model...")
+        board, corners, debug_images = recognizer.predict_with_debug(img, chess_color)
         
         # Count pieces found
         piece_count = len([piece for piece in board.piece_map().values()])
@@ -1226,13 +1369,11 @@ async def recognize_chess_position_with_cursor_description(
         # Generate human-readable description
         position_description = generate_position_description(board, color)
         
-        # Add parsing feedback to description
+        # Add recognition feedback to description
         if piece_count == 0:
-            position_description = f"⚠️ No pieces were parsed from the Cursor description. The description may not contain recognizable piece locations, or the format may need adjustment. {position_description}"
+            position_description = f"⚠️ No pieces were detected by the custom model. The image may not contain a clear chessboard or pieces. {position_description}"
         else:
-            position_description = f"✅ Successfully parsed {piece_count} pieces from Cursor's description. {position_description}"
-        
-        # No debug images needed - just return FEN and 2D board mapping
+            position_description = f"✅ Successfully detected {piece_count} pieces using custom trained model. {position_description}"
         
         logger.info(f"Recognition successful: FEN={fen}, Legal={legal}")
         
@@ -1523,7 +1664,7 @@ if __name__ == "__main__":
     uvicorn.run(
         app, 
         host="0.0.0.0", 
-        port=8001,
+        port=8002,
         log_level="info",
         access_log=True
     )
