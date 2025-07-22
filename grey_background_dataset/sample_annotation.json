@@ -1,0 +1,14 @@
+{
+  "image_path": "grey_background_dataset/images/your_image.jpg",
+  "image_size": [width, height],
+  "corners": [
+    [x1, y1],  // Top-left corner of chess board
+    [x2, y2],  // Top-right corner of chess board
+    [x3, y3],  // Bottom-right corner of chess board
+    [x4, y4]   // Bottom-left corner of chess board
+  ],
+  "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+  "white_turn": true,
+  "notes": "Sample annotation for grey background chess image",
+  "description": "Description of the chess position"
+}
