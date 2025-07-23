@@ -748,6 +748,21 @@ The image shows a standard 8x8 chess board with alternating dark green and off-w
     
     return description
 
+def board_to_2d(board):
+    """
+    Convert a python-chess Board to a 2D array (8x8) of piece symbols ('.' for empty squares).
+    Ranks are 8 (top) to 1 (bottom), files are a (left) to h (right).
+    """
+    board_2d = []
+    for rank in range(8, 0, -1):  # 8 to 1
+        row = []
+        for file in range(8):  # 0 to 7 (a to h)
+            square = chess.square(file, rank - 1)
+            piece = board.piece_at(square)
+            row.append(piece.symbol() if piece else '.')
+        board_2d.append(row)
+    return board_2d
+
 @app.on_event("startup")
 async def startup_event():
     """Initialize models on startup."""
@@ -1311,125 +1326,47 @@ async def recognize_chess_position_with_description(
 @app.post("/recognize_chess_position_with_cursor_description")
 async def recognize_chess_position_with_cursor_description(
     image: UploadFile = File(...),
-    cursor_description: str = Form(...),  # The description from Cursor's image analysis
     color: str = "white"
 ):
     """
-    Recognize chess position using custom trained model (keeping same interface).
-    
+    Recognize chess position using only the submitted image (no description parsing).
     Args:
         image: Chess board image (JPEG or PNG)
-        cursor_description: The image description from Cursor's built-in analysis (kept for compatibility)
         color: Color to play as ("white" or "black")
-    
     Returns:
         JSON with FEN notation and 2D board mapping
     """
     if not cfg or not recognizer:
         raise HTTPException(status_code=503, detail="Models not loaded")
-    
+
     # Validate image type
     if image.content_type not in ["image/jpeg", "image/png", "image/jpg"]:
         raise HTTPException(
             status_code=400, 
-            detail="Unsupported image type. Use JPEG or PNG."
+            detail="Unsupported file type. Please upload a JPEG or PNG image."
         )
-    
+
+    # Read image
+    contents = await image.read()
+    npimg = np.frombuffer(contents, np.uint8)
+    img = cv2.imdecode(npimg, cv2.IMREAD_COLOR)
+    if img is None:
+        raise HTTPException(status_code=400, detail="Could not decode image.")
+
+    # Use the model to recognize the chess position
     try:
-        # Read and decode image
-        img_bytes = await image.read()
-        np_arr = np.frombuffer(img_bytes, np.uint8)
-        img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
-        
-        if img is None:
-            raise HTTPException(status_code=400, detail="Failed to decode image")
-        
-        logger.info(f"Processing image: {image.filename}, shape: {img.shape}")
-        logger.info(f"Cursor description: {cursor_description}")
-        
-        # Validate color parameter
-        if color not in ["white", "black"]:
-            color = "white"  # Default to white
-        
-        chess_color = chess.WHITE if color == "white" else chess.BLACK
-        
-        # Use the custom trained model for recognition
-        logger.info("Performing chess recognition with custom trained model...")
-        board, corners, debug_images = recognizer.predict_with_debug(img, chess_color)
-        
-        # Count pieces found
-        piece_count = len([piece for piece in board.piece_map().values()])
-        
-        # Generate results
+        board, corners, debug_images = recognizer.predict_with_debug(img, color)
         fen = board.fen()
-        ascii_board = str(board)
-        lichess_url = f"https://lichess.org/editor/{fen}?color={color}"
-        legal = board.is_valid()
-        
-        # Generate human-readable description
-        position_description = generate_position_description(board, color)
-        
-        # Add recognition feedback to description
-        if piece_count == 0:
-            position_description = f"⚠️ No pieces were detected by the custom model. The image may not contain a clear chessboard or pieces. {position_description}"
-        else:
-            position_description = f"✅ Successfully detected {piece_count} pieces using custom trained model. {position_description}"
-        
-        logger.info(f"Recognition successful: FEN={fen}, Legal={legal}")
-        
-        # Create 2D board mapping
-        board_2d = []
-        for rank in range(8):
-            row = []
-            for file in range(8):
-                square = chess.square(file, 7 - rank)  # Convert to chess square (a1 is bottom-left)
-                piece = board.piece_at(square)
-                if piece:
-                    # Use standard chess notation: K, Q, R, B, N, P for white; k, q, r, b, n, p for black
-                    piece_symbol = piece.symbol()
-                    row.append(piece_symbol)
-                else:
-                    row.append('.')  # Empty square
-            board_2d.append(row)
-        
-        return JSONResponse(
-            content={
-                "fen": fen,
-                "board_2d": board_2d,  # 2D array representation of the board
-                "pieces_found": piece_count
-            }
-        )
-        
-    except HTTPException:
-        raise
+        board_2d = board_to_2d(board)
+        pieces_found = sum(1 for row in board_2d for cell in row if cell != ".")
+        return {
+            "fen": fen,
+            "board_2d": board_2d,
+            "pieces_found": pieces_found
+        }
     except Exception as e:
-        logger.error(f"Recognition failed: {str(e)}")
-        logger.error(traceback.format_exc())
-        
-        # Fallback for any error
-        logger.info(f"Recognition failed with error: {str(e)}. Providing fallback response with description.")
-        try:
-            fallback_board = chess.Board()
-            fallback_board.clear()
-            position_description = generate_position_description(fallback_board, color)
-            
-            # Create empty 2D board mapping for fallback
-            board_2d = [['.' for _ in range(8)] for _ in range(8)]
-            
-            return JSONResponse(
-                content={
-                    "fen": fallback_board.fen(),
-                    "board_2d": board_2d,  # Empty 2D array representation
-                    "pieces_found": 0
-                }
-            )
-        except Exception as fallback_error:
-            logger.error(f"Fallback response also failed: {fallback_error}")
-        
-        raise HTTPException(
-            status_code=500, 
-            detail=f"Recognition failed: {str(e)}"
-        )
+        logger.error(f"Recognition failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Recognition failed: {e}")
 
 @app.post("/recognize_chess_position_with_generated_description")
 async def recognize_chess_position_with_generated_description(
