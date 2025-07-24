@@ -1,0 +1,22 @@
+{
+  "image": "IMG_4755.JPG",
+  "corners": [
+    [
+      897,
+      2193
+    ],
+    [
+      2731,
+      2140
+    ],
+    [
+      2736,
+      4084
+    ],
+    [
+      451,
+      3921
+    ]
+  ],
+  "fen": "rnbqkbnr/1ppppppp/8/8/8/8/1PPPPPPP/RNBQKBNR w KQkq - 0 1"
+}
