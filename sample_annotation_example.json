@@ -1,0 +1,13 @@
+{
+  "image_path": "IMG_4698.JPG",
+  "image_size": [3240, 5760],
+  "corners": [
+    [500, 800],
+    [2740, 800],
+    [2740, 4960],
+    [500, 4960]
+  ],
+  "fen": "8/8/8/4P3/3p4/8/8/8 w - - 0 1",
+  "white_turn": true,
+  "notes": "White pawn on e5, black pawn on d4"
+} 

@@ -10,10 +10,25 @@ import typing
 import logging
 from PIL import Image
 from recap import URI, CfgNode as CN
+import inspect
+import torch.serialization
+from torchvision.models.resnet import ResNet as TorchResNet
+from torch.nn.modules.conv import Conv2d
+from torch.nn.modules.linear import Linear
+from torch.nn.modules.pooling import MaxPool2d
+from torch.nn.modules.activation import ReLU
+from torch.nn.modules.batchnorm import BatchNorm2d
+from torch.nn.modules.dropout import Dropout
+from torch.nn.modules.flatten import Flatten
+from torch.nn.modules.module import Module
+from torch.nn.modules.container import Sequential
+from torchvision.models.resnet import BasicBlock
+from torch.nn.modules.pooling import AdaptiveAvgPool2d
 
 from chesscog.core.dataset import build_dataset, build_data_loader, Datasets, unnormalize
 from chesscog.core.statistics import StatsAggregator
 from chesscog.core import device, DEVICE
+from chesscog.piece_classifier.models import ResNet
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +82,14 @@ def evaluate(model_path: Path, datasets: typing.List[Datasets], output_folder: P
     if not config_file.exists():
         raise ValueError("config file missing")
     cfg = CN.load_yaml_with_base(config_file)
-    model = torch.load(model_path, map_location=DEVICE)
+    with torch.serialization.safe_globals([
+        ResNet, TorchResNet, BasicBlock, Conv2d, Linear, MaxPool2d, AdaptiveAvgPool2d, ReLU, BatchNorm2d, Dropout, Flatten, Module, Sequential
+    ]):
+        torch_load_args = inspect.getfullargspec(torch.load).args
+        if 'weights_only' in torch_load_args:
+            model = torch.load(model_path, map_location=DEVICE, weights_only=False)
+        else:
+            model = torch.load(model_path, map_location=DEVICE)
     model = device(model)
     model.eval()
     datasets = {mode: build_dataset(cfg, mode)

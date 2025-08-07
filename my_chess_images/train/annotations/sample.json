@@ -1,0 +1,28 @@
+{
+  "image_path": "my_chess_images/train/images/sample.jpeg",
+  "image_size": [
+    4032,
+    3024
+  ],
+  "corners": [
+    [
+      0,
+      0
+    ],
+    [
+      4032,
+      0
+    ],
+    [
+      4032,
+      3024
+    ],
+    [
+      0,
+      3024
+    ]
+  ],
+  "fen": "8/8/8/8/8/8/8/8 w - - 0 1",
+  "white_turn": true,
+  "notes": "Please annotate the 4 corner points and provide the FEN notation"
+}

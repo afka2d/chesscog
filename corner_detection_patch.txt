@@ -1,0 +1,22 @@
+# Replace line 943 in /root/chesscog/main.py
+# Change this line:
+#        corners, debug_images = find_corners(cfg, img)
+#
+# To this:
+        # Perform corner detection
+        if corners:
+            # Parse manual corners from JSON string
+            try:
+                corner_coords = json.loads(corners)
+                if len(corner_coords) == 4 and all(len(c) == 2 for c in corner_coords):
+                    corners = np.array(corner_coords, dtype=np.float32)
+                    logger.info(f"Using manual corners: {corners}")
+                    debug_images = {}
+                else:
+                    raise ValueError("Invalid corner format")
+            except Exception as e:
+                logger.warning(f"Failed to parse manual corners: {e}, using automatic detection")
+                corners, debug_images = find_corners(cfg, img)
+        else:
+            # Use automatic corner detection
+            corners, debug_images = find_corners(cfg, img) 

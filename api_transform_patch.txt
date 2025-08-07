@@ -1,0 +1,9 @@
+
+# Patch for main.py - Fix occupancy classifier transforms
+# Find this line:
+# transforms.Resize((224, 224))
+# Replace with:
+# transforms.Resize((100, 100))
+
+# The occupancy classifier was trained with 100x100 images, but the API is using 224x224
+# This mismatch causes the model to fail completely
