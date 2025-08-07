@@ -18,5 +18,6 @@
       3820
     ]
   ],
-  "fen": "r1b5/2pk1ppp/8/1p2n1Bn/N1B1K1P1/2P4P/1P3P2/R7 w - - 0 1"
+  "fen": "r1b5/2pk1ppp/8/1p2n1Bn/N1B1K1P1/2P4P/1P3P2/R7 w - - 0 1",
+  "white_turn": true
 }

@@ -18,5 +18,6 @@
       3806
     ]
   ],
-  "fen": "rn2kbnr/1ppppppp/8/3q1b2/4P3/2B5/1PPP1PPP/RN1QKBNR w - - 0 1"
+  "fen": "rn2kbnr/1ppppppp/8/3q1b2/4P3/2B5/1PPP1PPP/RN1QKBNR w - - 0 1",
+  "white_turn": true
 }

@@ -18,5 +18,6 @@
       3758
     ]
   ],
-  "fen": "r5k1/2p2pp1/2n1BN1p/pp2bPpr/Q2nN1bP/1K1PqPP1/2P3B1/R6R w HAhq - 0 1"
+  "fen": "r5k1/2p2pp1/2n1BN1p/pp2bPpr/Q2nN1bP/1K1PqPP1/2P3B1/R6R w HAhq - 0 1",
+  "white_turn": true
 }

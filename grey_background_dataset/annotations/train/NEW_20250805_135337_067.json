@@ -18,5 +18,6 @@
       3509
     ]
   ],
-  "fen": "3rr1k1/2p2pp1/5q2/pp1NbPp1/Q1BnN1bP/1K1P1nP1/2P2PB1/R6R w - - 0 1"
+  "fen": "3rr1k1/2p2pp1/5q2/pp1NbPp1/Q1BnN1bP/1K1P1nP1/2P2PB1/R6R w - - 0 1",
+  "white_turn": true
 }

@@ -18,5 +18,6 @@
       3955
     ]
   ],
-  "fen": "2kr1r2/2pb1pp1/1pq2n2/p1bp2pp/2P4P/1P1P2Pn/1BQK1P2/1N1R1BNR w - - 0 1"
+  "fen": "2kr1r2/2pb1pp1/1pq2n2/p1bp2pp/2P4P/1P1P2Pn/1BQK1P2/1N1R1BNR w - - 0 1",
+  "white_turn": true
 }

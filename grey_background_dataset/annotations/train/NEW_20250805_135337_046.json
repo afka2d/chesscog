@@ -18,5 +18,6 @@
       3918
     ]
   ],
-  "fen": "3r4/6p1/1pk2nq1/p2b1pN1/1bP1n1p1/1P1P1B1r/1B1R1QN1/1K5R w K - 0 1"
+  "fen": "3r4/6p1/1pk2nq1/p2b1pN1/1bP1n1p1/1P1P1B1r/1B1R1QN1/1K5R w K - 0 1",
+  "white_turn": true
 }

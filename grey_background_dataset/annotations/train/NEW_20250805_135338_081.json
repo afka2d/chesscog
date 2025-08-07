@@ -18,5 +18,6 @@
       4185
     ]
   ],
-  "fen": "3r1r2/3b2p1/1pkb2q1/p2N1p1p/Q1P1n1pP/1P1P1n2/1B4N1/1K1R1R1B w HAha - 0 1"
+  "fen": "3r1r2/3b2p1/1pkb2q1/p2N1p1p/Q1P1n1pP/1P1P1n2/1B4N1/1K1R1R1B w HAha - 0 1",
+  "white_turn": true
 }
