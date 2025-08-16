@@ -1,0 +1,18 @@
+
+# Improved ResNet configuration with more training
+_BASE_: config://piece_classifier/_base.yaml
+
+TRAINING:
+  MODEL:
+    REGISTRY: PIECE_CLASSIFIER
+    NAME: ResNet
+  PHASES:
+    - EPOCHS: 30  # More epochs for better accuracy
+      OPTIMIZER:
+        LEARNING_RATE: 0.001
+        NAME: Adam
+      PARAMS: all
+      LOSS:
+        NAME: CrossEntropyLoss
+        # Balanced weights for better performance
+        CLASS_WEIGHTS: [1.5, 2.0, 1.5, 0.8, 2.0, 1.5, 1.5, 2.0, 1.5, 0.8, 2.0, 1.5]

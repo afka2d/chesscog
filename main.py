@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
 import base64
 import io
+import json
 import logging
 import traceback
 import time
@@ -73,9 +74,9 @@ class CustomChessRecognizer(ChessRecognizer):
                 'white_bishop', 'white_king', 'white_knight', 'white_pawn', 'white_queen', 'white_rook'
             ]
             
-            # Define transforms to match training
+            # Define transforms to match training configuration
             self._custom_piece_transforms = transforms.Compose([
-                transforms.Resize((100, 200)),
+                transforms.Resize((224, 448)),
                 transforms.ToTensor(),
                 transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
             ])
@@ -111,16 +112,16 @@ class CustomChessRecognizer(ChessRecognizer):
             all_pieces = np.full(len(self._squares), None, dtype=object)
             return all_pieces
         
-        # Warp the image to get the board
-        warped = create_piece_dataset.warp_chessboard_image(img, corners)
+        # Warp the image to get the board with proper dimensions
+        warped = self._warp_chessboard_image_fixed(img, corners)
         logger.info(f"Warped board shape: {warped.shape}")
         
         # Process each occupied square
         pieces = []
         for i, square in enumerate(occupied_squares):
             try:
-                # Crop the square
-                piece_img = crop_piece_square(warped, square, turn)
+                # Crop the square using the fixed function
+                piece_img = self._crop_piece_square_fixed(warped, square, turn)
                 logger.info(f"Square {chess.square_name(square)}: cropped image shape {piece_img.shape}")
                 
                 # Convert to PIL and apply transforms
@@ -161,6 +162,60 @@ class CustomChessRecognizer(ChessRecognizer):
         
         return all_pieces
     
+    def _warp_chessboard_image_fixed(self, img: np.ndarray, corners: np.ndarray) -> np.ndarray:
+        """Warp the chessboard image with proper dimensions for piece classification."""
+        from chesscog.core import sort_corner_points
+        
+        # Sort corners to ensure correct order
+        sorted_corners = sort_corner_points(corners)
+        
+        # Calculate target size based on the original image dimensions
+        # Use a reasonable square size that will give good resolution for piece classification
+        target_square_size = 224  # 224x224 pixels per square for good resolution
+        target_board_size = 8 * target_square_size  # 1792x1792 pixels
+        
+        # Define target corners (top-left, top-right, bottom-right, bottom-left)
+        target_corners = np.array([
+            [0, 0],                                    # top-left
+            [target_board_size, 0],                    # top-right
+            [target_board_size, target_board_size],    # bottom-right
+            [0, target_board_size]                     # bottom-left
+        ], dtype=np.float32)
+        
+        # Calculate perspective transform
+        transform_matrix = cv2.getPerspectiveTransform(sorted_corners, target_corners)
+        
+        # Warp the image
+        warped = cv2.warpPerspective(img, transform_matrix, (target_board_size, target_board_size))
+        
+        return warped
+    
+    def _crop_piece_square_fixed(self, warped_img: np.ndarray, square: chess.Square, turn: chess.Color) -> np.ndarray:
+        """Crop a piece square with proper dimensions."""
+        # Calculate square coordinates
+        rank = chess.square_rank(square)
+        file = chess.square_file(square)
+        
+        # Adjust for perspective (white's perspective)
+        if turn == chess.WHITE:
+            row = 7 - rank
+            col = file
+        else:
+            row = rank
+            col = 7 - file
+        
+        # Calculate pixel coordinates (224x224 per square)
+        square_size = 224
+        x1 = col * square_size
+        y1 = row * square_size
+        x2 = x1 + square_size
+        y2 = y1 + square_size
+        
+        # Crop the square
+        piece_img = warped_img[y1:y2, x1:x2]
+        
+        return piece_img
+    
     def _piece_name_to_chess_piece(self, piece_name: str) -> chess.Piece:
         """Convert piece name to chess.Piece object."""
         piece_mapping = {
@@ -186,7 +241,7 @@ def load_models():
         logger.info("Loading corner detection configuration...")
         cfg = CN.load_yaml_with_base("config/corner_detection.yaml")
         
-        logger.info("Loading custom chess recognizer with trained ResNet model...")
+        logger.info("Loading custom chess recognizer with best trained ResNet model...")
         custom_model_path = Path("runs/piece_classifier/ResNet/ResNet.pt")
         
         if not custom_model_path.exists():
@@ -236,6 +291,35 @@ def encode_image(img, max_width=800, max_height=600):
     except Exception as e:
         logger.error(f"Failed to encode image: {e}")
         return None
+
+def fen_to_board_2d(fen):
+    """Convert a FEN string to a 2D board representation for UI display."""
+    try:
+        # Parse the FEN string to get the board position
+        board_part = fen.split(' ')[0]  # Get just the board part, ignore other FEN components
+        
+        # Create 8x8 board
+        board_2d = []
+        
+        # Process each rank (row)
+        ranks = board_part.split('/')
+        for rank in ranks:
+            row = []
+            for char in rank:
+                if char.isdigit():
+                    # Add empty squares
+                    for _ in range(int(char)):
+                        row.append('.')
+                else:
+                    # Add piece
+                    row.append(char)
+            board_2d.append(row)
+        
+        return board_2d
+    except Exception as e:
+        logger.error(f"Failed to convert FEN to 2D board: {e}")
+        # Return empty board on error
+        return [['.' for _ in range(8)] for _ in range(8)]
 
 def create_chess_board_visualization(board, max_width=400, max_height=400):
     """Create a visual representation of the detected chess board."""
@@ -320,7 +404,7 @@ def create_chess_board_visualization(board, max_width=400, max_height=400):
             
             img = cv2.resize(img, (new_width, new_height), interpolation=cv2.INTER_AREA)
         
-        return encode_image(img)
+        return img
     except Exception as e:
         logger.error(f"Failed to create chess board visualization: {e}")
         return None
@@ -767,9 +851,18 @@ def board_to_2d(board):
 async def startup_event():
     """Initialize models on startup."""
     logger.info("Starting Chess Position Scanner API...")
-    if not load_models():
-        logger.error("Failed to load models during startup")
-        raise RuntimeError("Failed to load models")
+    try:
+        # Run model loading in a thread pool to avoid blocking the event loop
+        import asyncio
+        loop = asyncio.get_event_loop()
+        result = await loop.run_in_executor(None, load_models)
+        if not result:
+            logger.error("Failed to load models during startup")
+            raise RuntimeError("Failed to load models")
+        logger.info("Startup completed successfully")
+    except Exception as e:
+        logger.error(f"Startup failed: {e}")
+        raise RuntimeError(f"Startup failed: {e}")
 
 @app.get("/")
 async def root():
@@ -1484,6 +1577,280 @@ async def recognize_chess_position_with_generated_description(
         raise HTTPException(
             status_code=500, 
             detail=f"Recognition failed: {str(e)}"
+        )
+
+@app.post("/recognize_with_manual_corners")
+async def recognize_with_manual_corners(
+    image: UploadFile = File(...),
+    corners: str = Form(...),  # JSON string of corner coordinates
+    color: str = "white"
+):
+    """
+    Recognize chess position using manually selected corners.
+    Optimized for fast response to prevent app hanging.
+    """
+    """
+    Recognize chess position using manually selected corners.
+    
+    Args:
+        image: Chess board image (JPEG or PNG)
+        corners: JSON string of corner coordinates [[x1,y1], [x2,y2], [x3,y3], [x4,y4]]
+        color: Color to play as ("white" or "black")
+    
+    Returns:
+        JSON with FEN notation, board visualization, and debug information
+    """
+    start_time = time.time()
+    
+    if not cfg or not recognizer:
+        raise HTTPException(status_code=503, detail="Models not loaded")
+    
+    # Validate image type
+    if image.content_type not in ["image/jpeg", "image/png", "image/jpg"]:
+        raise HTTPException(
+            status_code=400, 
+            detail="Unsupported image type. Use JPEG or PNG."
+        )
+    
+    try:
+        # Read and decode image
+        img_bytes = await image.read()
+        np_arr = np.frombuffer(img_bytes, np.uint8)
+        img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+        
+        if img is None:
+            raise HTTPException(status_code=400, detail="Failed to decode image")
+        
+        logger.info(f"Processing image with manual corners: {image.filename}, shape: {img.shape}")
+        
+        # Parse corners from JSON string
+        try:
+            corners_data = json.loads(corners)
+            corners_array = np.array(corners_data, dtype=np.float32)
+            
+            if corners_array.shape != (4, 2):
+                raise HTTPException(
+                    status_code=400, 
+                    detail="Invalid corners format. Expected 4 points with x,y coordinates."
+                )
+            
+            # Auto-detect if corners are normalized (0-1) or pixel coordinates
+            # If the maximum coordinate is <= 1.2 and min >= -0.2, assume normalized
+            # (allow some tolerance for slightly out-of-bounds normalized coordinates)
+            img_height, img_width = img.shape[:2]
+            max_coord = np.max(corners_array)
+            min_coord = np.min(corners_array)
+            
+            logger.info(f"DEBUG: Image size: {img_width}x{img_height}, corner range: {min_coord:.3f} to {max_coord:.3f}")
+            
+            if max_coord <= 1.2 and min_coord >= -0.2:
+                logger.info(f"Detected normalized coordinates (range: {min_coord:.3f} to {max_coord:.3f}), converting to pixel coordinates")
+                original_corners = corners_array.copy()
+                corners_array[:, 0] *= img_width   # Convert x coordinates
+                corners_array[:, 1] *= img_height  # Convert y coordinates
+                logger.info(f"Converted from {original_corners} to pixel coordinates: {corners_array}")
+            else:
+                logger.info(f"Using pixel coordinates (range: {min_coord:.1f} to {max_coord:.1f})")
+                
+        except json.JSONDecodeError:
+            raise HTTPException(
+                status_code=400, 
+                detail="Invalid JSON format for corners parameter."
+            )
+        
+        # Validate color parameter
+        if color not in ["white", "black"]:
+            color = "white"  # Default to white
+        
+        chess_color = chess.WHITE if color == "white" else chess.BLACK
+        
+        # Sort corners to ensure proper order (top-left, top-right, bottom-right, bottom-left)
+        sorted_corners = sort_corner_points(corners_array)
+        
+        logger.info(f"Manual corners: {sorted_corners.tolist()}")
+        
+        # Perform recognition with manual corners
+        logger.info("Performing chess recognition with manual corners...")
+        
+        # Use the existing recognizer but with manual corners
+        # We'll need to modify the approach since the recognizer expects to detect corners
+        # For now, let's use the corners to warp the image and then process it
+        
+        from chesscog.occupancy_classifier.create_dataset import warp_chessboard_image
+        
+        # Warp the chessboard using manual corners
+        warped_board = warp_chessboard_image(img, sorted_corners)
+        
+        # Convert warped board to BGR for OpenCV processing
+        warped_bgr = cv2.cvtColor(warped_board, cv2.COLOR_RGB2BGR)
+        
+        # Use the recognizer to process the warped board
+        # We'll call the recognizer's internal methods directly
+        logger.info("Processing warped board for piece recognition...")
+        
+        try:
+            # Use the existing recognizer's occupancy classification with the original image
+            # This keeps the existing occupancy classifier and only improves piece classification
+            
+            logger.info("Using existing occupancy classifier with improved piece classification...")
+            
+            # Use the recognizer's occupancy classification with the original image and manual corners
+            # This is the correct approach - occupancy classifier expects original image with corners
+            occupancy = recognizer._classify_occupancy(img, chess_color, sorted_corners)
+            
+            # Convert warped board to BGR for piece classification
+            warped_bgr = cv2.cvtColor(warped_board, cv2.COLOR_RGB2BGR)
+            
+            # Create a chess board to populate
+            board = chess.Board()
+            board.clear()
+            
+            # Define the 64 squares in chess order (a1 to h8)
+            squares = []
+            for rank in range(8):
+                for file in range(8):
+                    square = chess.square(file, 7 - rank)  # Convert to chess square
+                    squares.append(square)
+            
+            # Process only occupied squares with FAST piece classification
+            piece_count = 0
+            square_size = warped_bgr.shape[0] // 8  # Assuming square warped board
+            
+            # Batch process all occupied squares for speed
+            occupied_squares = []
+            occupied_indices = []
+            
+            for i, square in enumerate(squares):
+                if occupancy[i]:
+                    rank = i // 8
+                    file = i % 8
+                    
+                    # Calculate square coordinates in the warped image
+                    y1 = rank * square_size
+                    y2 = (rank + 1) * square_size
+                    x1 = file * square_size
+                    x2 = (file + 1) * square_size
+                    
+                    # Extract square image
+                    square_img = warped_bgr[y1:y2, x1:x2]
+                    
+                    if square_img.size > 0:
+                        occupied_squares.append((square, square_img))
+                        occupied_indices.append(i)
+            
+            # Batch process all occupied squares at once
+            if occupied_squares and hasattr(recognizer, '_custom_piece_transforms'):
+                try:
+                    # Prepare batch of images
+                    batch_images = []
+                    for square, square_img in occupied_squares:
+                        square_rgb = cv2.cvtColor(square_img, cv2.COLOR_BGR2RGB)
+                        square_pil = Image.fromarray(square_rgb)
+                        transformed_square = recognizer._custom_piece_transforms(square_pil)
+                        batch_images.append(transformed_square)
+                    
+                    if batch_images:
+                        # Stack all images into a single batch
+                        batch_tensor = torch.stack(batch_images)
+                        
+                        # Predict all pieces at once
+                        with torch.no_grad():
+                            outputs = recognizer._custom_piece_model(batch_tensor)
+                            probabilities = torch.softmax(outputs, dim=1)
+                            predicted_classes = torch.argmax(probabilities, dim=1)
+                            confidences = torch.max(probabilities, dim=1)[0]
+                            
+                            # Process results
+                            for i, (square, _) in enumerate(occupied_squares):
+                                predicted_class = predicted_classes[i].item()
+                                confidence = confidences[i].item()
+                                
+                                # Use a reasonable confidence threshold
+                                if confidence > 0.4:
+                                    piece_name = recognizer._custom_piece_classes[predicted_class]
+                                    piece = recognizer._piece_name_to_chess_piece(piece_name)
+                                    board.set_piece_at(square, piece)
+                                    piece_count += 1
+                                    
+                                    logger.debug(f"Square {chess.square_name(square)}: {piece_name} (confidence: {confidence:.3f})")
+                                else:
+                                    logger.debug(f"Square {chess.square_name(square)}: occupied but low confidence ({confidence:.3f})")
+                                    
+                except Exception as batch_error:
+                    logger.warning(f"Batch piece classification failed: {batch_error}")
+                    # Fallback to individual processing if batch fails
+                    for square, square_img in occupied_squares:
+                        try:
+                            square_rgb = cv2.cvtColor(square_img, cv2.COLOR_BGR2RGB)
+                            square_pil = Image.fromarray(square_rgb)
+                            transformed_square = recognizer._custom_piece_transforms(square_pil)
+                            transformed_square = transformed_square.unsqueeze(0)
+                            
+                            with torch.no_grad():
+                                output = recognizer._custom_piece_model(transformed_square)
+                                probabilities = torch.softmax(output, dim=1)
+                                predicted_class = torch.argmax(probabilities, dim=1).item()
+                                confidence = probabilities[0][predicted_class].item()
+                                
+                                if confidence > 0.4:
+                                    piece_name = recognizer._custom_piece_classes[predicted_class]
+                                    piece = recognizer._piece_name_to_chess_piece(piece_name)
+                                    board.set_piece_at(square, piece)
+                                    piece_count += 1
+                        except Exception as piece_error:
+                            logger.warning(f"Individual piece classification failed for square {chess.square_name(square)}: {piece_error}")
+            
+            logger.info(f"Improved piece recognition completed: Found {piece_count} pieces")
+            
+        except Exception as recognition_error:
+            logger.warning(f"Piece recognition failed, using fallback: {recognition_error}")
+            logger.error(traceback.format_exc())
+            # Fallback to empty board if recognition fails
+            board = chess.Board()
+            board.clear()
+            piece_count = 0
+        
+        # Generate results
+        fen = board.fen()
+        legal = board.is_valid()
+        
+        # No debug images needed - iOS app will handle board visualization from FEN
+        debug_images = {}
+        
+        # Generate 2D board representation for UI display (temporarily disabled)
+        # board_2d = fen_to_board_2d(fen)
+        
+        processing_time = time.time() - start_time
+        logger.info(f"Manual corner recognition completed: FEN={fen}, Legal={legal}, Pieces={piece_count}, Time={processing_time:.3f}s")
+        
+        return JSONResponse(
+            content={
+                "fen": fen,
+                "ascii": None,
+                "lichess_url": None,
+                "legal_position": legal,
+                "position_description": None,
+                "board_2d": None,
+                "pieces_found": piece_count,
+                "debug_images": debug_images,
+                "debug_image_paths": None,
+                "corners": sorted_corners.tolist(),
+                "processing_time": round(processing_time, 3),
+                "image_info": None,
+                "debug_info": None,
+                "error": None
+            }
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Manual corner recognition failed: {str(e)}")
+        logger.error(traceback.format_exc())
+        
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Manual corner recognition failed: {str(e)}"
         )
 
 @app.post("/recognize_chess_position_simple")

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+ #!/usr/bin/env python3
 """
 Split the images in grey_background_dataset/images into train/val/test subfolders (70/15/15 split).
 Move corresponding annotation files as well.

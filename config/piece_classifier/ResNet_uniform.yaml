@@ -1,0 +1,17 @@
+# ResNet configuration with uniform class weights (no bias)
+_BASE_: config://piece_classifier/_base.yaml
+
+TRAINING:
+  MODEL:
+    REGISTRY: PIECE_CLASSIFIER
+    NAME: ResNet
+  PHASES:
+    - EPOCHS: 10  # Shorter training for quick test
+      OPTIMIZER:
+        LEARNING_RATE: 0.001
+        NAME: Adam
+      PARAMS: all
+      LOSS:
+        NAME: CrossEntropyLoss
+        # Uniform weights - no bias toward any class
+        CLASS_WEIGHTS: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]

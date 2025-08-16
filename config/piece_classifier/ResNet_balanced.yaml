@@ -1,0 +1,7 @@
+# ResNet configuration with balanced class weights
+_BASE_: config://piece_classifier/_base_balanced.yaml
+
+TRAINING:
+  MODEL:
+    REGISTRY: PIECE_CLASSIFIER
+    NAME: ResNet

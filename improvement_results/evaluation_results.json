@@ -1,0 +1,17 @@
+{
+  "ResNet_uniform": {
+    "accuracy": null,
+    "duration": 5.273024082183838,
+    "success": false
+  },
+  "ResNet_improved": {
+    "accuracy": null,
+    "duration": 4.941796064376831,
+    "success": false
+  },
+  "ResNet50": {
+    "accuracy": null,
+    "duration": 4.097448110580444,
+    "success": false
+  }
+}

@@ -15,16 +15,24 @@ DATASET:
     - white_pawn
     - white_queen
     - white_rook
-  BATCH_SIZE: 16
+  BATCH_SIZE: 32
   TRANSFORMS:
     CENTER_CROP: null
-    RESIZE: [100, 200]
+    RESIZE: [224, 448]
     RANDOM_HORIZONTAL_FLIP: null
+    COLOR_JITTER:
+      BRIGHTNESS: 0.2
+      CONTRAST: 0.2
+      SATURATION: 0.2
+      HUE: 0.1
 
 TRAINING:
   PHASES:
-    - EPOCHS: 6
+    - EPOCHS: 15
       OPTIMIZER:
         LEARNING_RATE: 0.001
         NAME: Adam
       PARAMS: all
+      LOSS:
+        NAME: CrossEntropyLoss
+        CLASS_WEIGHTS: [2.0, 3.0, 2.0, 0.5, 3.0, 2.0, 2.0, 3.0, 2.0, 0.5, 3.0, 2.0]

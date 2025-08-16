@@ -39,7 +39,7 @@ class ManualCornerRecognizer:
         
         self.piece_transform = transforms.Compose([
             transforms.ToPILImage(),
-            transforms.Resize((100, 200)),  # Match training config
+            transforms.Resize((224, 448)),  # Match training config
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ])
@@ -77,8 +77,8 @@ class ManualCornerRecognizer:
         # Sort corners
         sorted_corners = self.sort_corner_points(corners)
         
-        # Define target size (8x8 squares, each 100x100 pixels)
-        target_size = (800, 800)
+        # Define target size (8x8 squares, each 224x224 pixels)
+        target_size = (1792, 1792)  # 8 * 224 = 1792
         
         # Define target corners (top-left, top-right, bottom-right, bottom-left)
         target_corners = np.array([
@@ -98,11 +98,11 @@ class ManualCornerRecognizer:
     
     def extract_square(self, warped_board, rank, file):
         """Extract a specific square from the warped board."""
-        # Calculate square coordinates (100x100 pixels each)
-        x1 = file * 100
-        y1 = rank * 100
-        x2 = x1 + 100
-        y2 = y1 + 100
+        # Calculate square coordinates (224x224 pixels each)
+        x1 = file * 224
+        y1 = rank * 224
+        x2 = x1 + 224
+        y2 = y1 + 224
         
         # Extract square
         square = warped_board[y1:y2, x1:x2]
