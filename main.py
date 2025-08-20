@@ -11,6 +11,7 @@ import time
 import numpy as np
 import cv2
 import chess
+import os
 from PIL import Image, ImageDraw, ImageFont
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
@@ -32,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Chess Position Scanner API",
-    description="API for recognizing chess positions from images",
+    description="API for recognizing chess positions from images with manual corner coordinates",
     version="1.0.0"
 )
 
@@ -52,1025 +53,202 @@ custom_piece_model = None
 custom_piece_transforms = None
 
 class CustomChessRecognizer(ChessRecognizer):
-    """Custom ChessRecognizer that uses the newly trained ResNet piece classifier."""
+    """
+    Custom chess recognizer that uses the improved ResNet_uniform model.
+    """
     
-    def __init__(self, classifiers_folder: Path, custom_piece_model_path: Path):
-        """Initialize with custom piece classifier model."""
-        super().__init__(classifiers_folder)
-        
-        # Load custom piece classifier
-        self._load_custom_piece_classifier(custom_piece_model_path)
+    def __init__(self, cfg, *args, **kwargs):
+        super().__init__(cfg, *args, **kwargs)
+        self.custom_piece_model = None
+        self.custom_piece_transforms = None
+        self._load_custom_piece_model()
     
-    def _load_custom_piece_classifier(self, model_path: Path):
-        """Load the custom trained ResNet piece classifier."""
+    def _load_custom_piece_model(self):
+        """Load the custom piece classification model."""
         try:
-            # Load the trained model
-            self._custom_piece_model = torch.load(str(model_path), map_location=torch.device('cpu'), weights_only=False)
-            self._custom_piece_model.eval()
+            # Load the improved ResNet_uniform model
+            model_path = "runs/piece_classifier/ResNet_uniform/ResNet_uniform.pt"
+            if os.path.exists(model_path):
+                logger.info(f"Loading custom piece model from {model_path}")
+                self.custom_piece_model = torch.load(model_path, map_location='cpu', weights_only=False)
+                self.custom_piece_model.eval()
+                
+                # Define transforms for the custom model
+                self.custom_piece_transforms = transforms.Compose([
+                    transforms.ToPILImage(),
+                    transforms.Resize((100, 100)),  # Match the training configuration
+                    transforms.ToTensor(),
+                    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+                ])
+                
+                logger.info("Custom piece model loaded successfully")
+            else:
+                logger.warning(f"Custom piece model not found at {model_path}, using default model")
+        except Exception as e:
+            logger.error(f"Failed to load custom piece model: {e}")
+            logger.warning("Falling back to default piece model")
+    
+    def _classify_pieces(self, img, turn, corners, occupancy):
+        """
+        Classify pieces using the custom model if available.
+        """
+        if self.custom_piece_model is None:
+            # Fall back to parent method
+            return super()._classify_pieces(img, turn, corners, occupancy)
+        
+        try:
+            logger.info("Using custom piece classification model")
             
-            # Define piece classes in the order they were trained
-            self._custom_piece_classes = [
+            # Warp the chessboard
+            warped = warp_chessboard_image(img, corners)
+            
+            # Get piece classes from the custom model
+            piece_classes = [
                 'black_bishop', 'black_king', 'black_knight', 'black_pawn', 'black_queen', 'black_rook',
                 'white_bishop', 'white_king', 'white_knight', 'white_pawn', 'white_queen', 'white_rook'
             ]
             
-            # Define transforms to match training configuration
-            self._custom_piece_transforms = transforms.Compose([
-                transforms.Resize((224, 448)),
-                transforms.ToTensor(),
-                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-            ])
+            pieces = np.full((8, 8), None, dtype=object)
             
-            logger.info(f"Custom piece classifier loaded from {model_path}")
+            for rank in range(8):
+                for file in range(8):
+                    if occupancy[rank, file]:
+                        # Crop the square
+                        square_img = crop_piece_square(warped, rank, file)
+                        
+                        # Preprocess for the custom model
+                        square_tensor = self.custom_piece_transforms(square_img).unsqueeze(0)
+                        
+                        # Get prediction
+                        with torch.no_grad():
+                            output = self.custom_piece_model(square_tensor)
+                            probabilities = torch.softmax(output, dim=1)
+                            predicted_class = torch.argmax(probabilities, dim=1).item()
+                            confidence = probabilities[0][predicted_class].item()
+                        
+                        # Only use prediction if confidence is high enough
+                        if confidence > 0.3:  # Adjustable threshold
+                            piece_name = piece_classes[predicted_class]
+                            
+                            # Parse piece name to get color and type
+                            if piece_name.startswith('white_'):
+                                color = chess.WHITE
+                                piece_type = piece_name[6:]  # Remove 'white_' prefix
+                            else:
+                                color = chess.BLACK
+                                piece_type = piece_name[6:]  # Remove 'black_' prefix
+                            
+                            # Convert piece type to chess piece
+                            piece_map = {
+                                'pawn': chess.PAWN,
+                                'rook': chess.ROOK,
+                                'knight': chess.KNIGHT,
+                                'bishop': chess.BISHOP,
+                                'queen': chess.QUEEN,
+                                'king': chess.KING
+                            }
+                            
+                            if piece_type in piece_map:
+                                pieces[rank, file] = chess.Piece(piece_map[piece_type], color)
+                                logger.debug(f"Square {rank},{file}: {piece_name} (conf: {confidence:.3f})")
+                            else:
+                                logger.warning(f"Unknown piece type: {piece_type}")
+                        else:
+                            logger.debug(f"Square {rank},{file}: Low confidence ({confidence:.3f}), skipping")
+            
+            return pieces
             
         except Exception as e:
-            logger.error(f"Failed to load custom piece classifier: {e}")
-            raise
-    
-    def _classify_occupancy(self, img: np.ndarray, turn: chess.Color, corners: np.ndarray) -> np.ndarray:
-        """Override occupancy classification to add debug output."""
-        occupancy = super()._classify_occupancy(img, turn, corners)
-        
-        # Debug occupancy detection
-        occupied_count = np.sum(occupancy)
-        logger.info(f"Occupancy detection: Found {occupied_count} occupied squares out of 64")
-        if occupied_count > 0:
-            occupied_squares = [chess.square_name(sq) for sq, occ in zip(self._squares, occupancy) if occ]
-            logger.info(f"Occupied squares: {occupied_squares}")
-        
-        return occupancy
-    
-    def _classify_pieces(self, img: np.ndarray, turn: chess.Color, corners: np.ndarray, occupancy: np.ndarray) -> np.ndarray:
-        """Override piece classification to use custom model."""
-        occupied_squares = np.array(self._squares)[occupancy]
-        
-        logger.info(f"Custom piece classifier: Found {len(occupied_squares)} occupied squares")
-        
-        # If no squares are occupied, return all None pieces
-        if len(occupied_squares) == 0:
-            logger.info("No occupied squares found, returning empty board")
-            all_pieces = np.full(len(self._squares), None, dtype=object)
-            return all_pieces
-        
-        # Warp the image to get the board with proper dimensions
-        warped = self._warp_chessboard_image_fixed(img, corners)
-        logger.info(f"Warped board shape: {warped.shape}")
-        
-        # Process each occupied square
-        pieces = []
-        for i, square in enumerate(occupied_squares):
-            try:
-                # Crop the square using the fixed function
-                piece_img = self._crop_piece_square_fixed(warped, square, turn)
-                logger.info(f"Square {chess.square_name(square)}: cropped image shape {piece_img.shape}")
-                
-                # Convert to PIL and apply transforms
-                piece_pil = Image.fromarray(piece_img, 'RGB')
-                piece_tensor = self._custom_piece_transforms(piece_pil).unsqueeze(0)
-                
-                # Get prediction
-                with torch.no_grad():
-                    output = self._custom_piece_model(piece_tensor)
-                    probabilities = F.softmax(output, dim=1)
-                    predicted_class = torch.argmax(probabilities, dim=1).item()
-                    confidence = probabilities[0][predicted_class].item()
-                
-                # Convert class name to chess piece
-                piece_name = self._custom_piece_classes[predicted_class]
-                piece = self._piece_name_to_chess_piece(piece_name)
-                
-                logger.info(f"Square {chess.square_name(square)}: predicted {piece_name} with confidence {confidence:.3f}")
-                
-                # Only accept predictions with reasonable confidence
-                if confidence > 0.1:  # Lower threshold for debugging
-                    pieces.append(piece)
-                    logger.info(f"Accepted piece {piece_name} on {chess.square_name(square)}")
-                else:
-                    pieces.append(None)
-                    logger.info(f"Rejected piece {piece_name} on {chess.square_name(square)} due to low confidence")
-                    
-            except Exception as e:
-                logger.warning(f"Failed to classify piece on square {chess.square_name(square)}: {e}")
-                pieces.append(None)
-        
-        # Create full array with pieces only on occupied squares
-        all_pieces = np.full(len(self._squares), None, dtype=object)
-        all_pieces[occupancy] = pieces
-        
-        accepted_pieces = [p for p in pieces if p is not None]
-        logger.info(f"Custom piece classifier: Accepted {len(accepted_pieces)} pieces out of {len(occupied_squares)} occupied squares")
-        
-        return all_pieces
-    
-    def _warp_chessboard_image_fixed(self, img: np.ndarray, corners: np.ndarray) -> np.ndarray:
-        """Warp the chessboard image with proper dimensions for piece classification."""
-        from chesscog.core import sort_corner_points
-        
-        # Sort corners to ensure correct order
-        sorted_corners = sort_corner_points(corners)
-        
-        # Calculate target size based on the original image dimensions
-        # Use a reasonable square size that will give good resolution for piece classification
-        target_square_size = 224  # 224x224 pixels per square for good resolution
-        target_board_size = 8 * target_square_size  # 1792x1792 pixels
-        
-        # Define target corners (top-left, top-right, bottom-right, bottom-left)
-        target_corners = np.array([
-            [0, 0],                                    # top-left
-            [target_board_size, 0],                    # top-right
-            [target_board_size, target_board_size],    # bottom-right
-            [0, target_board_size]                     # bottom-left
-        ], dtype=np.float32)
-        
-        # Calculate perspective transform
-        transform_matrix = cv2.getPerspectiveTransform(sorted_corners, target_corners)
-        
-        # Warp the image
-        warped = cv2.warpPerspective(img, transform_matrix, (target_board_size, target_board_size))
-        
-        return warped
-    
-    def _crop_piece_square_fixed(self, warped_img: np.ndarray, square: chess.Square, turn: chess.Color) -> np.ndarray:
-        """Crop a piece square with proper dimensions."""
-        # Calculate square coordinates
-        rank = chess.square_rank(square)
-        file = chess.square_file(square)
-        
-        # Adjust for perspective (white's perspective)
-        if turn == chess.WHITE:
-            row = 7 - rank
-            col = file
-        else:
-            row = rank
-            col = 7 - file
-        
-        # Calculate pixel coordinates (224x224 per square)
-        square_size = 224
-        x1 = col * square_size
-        y1 = row * square_size
-        x2 = x1 + square_size
-        y2 = y1 + square_size
-        
-        # Crop the square
-        piece_img = warped_img[y1:y2, x1:x2]
-        
-        return piece_img
-    
-    def _piece_name_to_chess_piece(self, piece_name: str) -> chess.Piece:
-        """Convert piece name to chess.Piece object."""
-        piece_mapping = {
-            'black_bishop': chess.Piece(chess.BISHOP, chess.BLACK),
-            'black_king': chess.Piece(chess.KING, chess.BLACK),
-            'black_knight': chess.Piece(chess.KNIGHT, chess.BLACK),
-            'black_pawn': chess.Piece(chess.PAWN, chess.BLACK),
-            'black_queen': chess.Piece(chess.QUEEN, chess.BLACK),
-            'black_rook': chess.Piece(chess.ROOK, chess.BLACK),
-            'white_bishop': chess.Piece(chess.BISHOP, chess.WHITE),
-            'white_king': chess.Piece(chess.KING, chess.WHITE),
-            'white_knight': chess.Piece(chess.KNIGHT, chess.WHITE),
-            'white_pawn': chess.Piece(chess.PAWN, chess.WHITE),
-            'white_queen': chess.Piece(chess.QUEEN, chess.WHITE),
-            'white_rook': chess.Piece(chess.ROOK, chess.WHITE),
-        }
-        return piece_mapping.get(piece_name, None)
+            logger.error(f"Custom piece classification failed: {e}")
+            logger.warning("Falling back to default piece classification")
+            return super()._classify_pieces(img, turn, corners, occupancy)
 
-def load_models():
-    """Load the chess recognition models with custom piece classifier."""
-    global cfg, recognizer
+def encode_image(image, max_width=800, max_height=600):
+    """Encode image to base64 string with size constraints."""
     try:
-        logger.info("Loading corner detection configuration...")
-        cfg = CN.load_yaml_with_base("config/corner_detection.yaml")
-        
-        logger.info("Loading custom chess recognizer with best trained ResNet model...")
-        custom_model_path = Path("runs/piece_classifier/ResNet/ResNet.pt")
-        
-        if not custom_model_path.exists():
-            logger.warning("Custom piece classifier not found, falling back to default")
-            recognizer = ChessRecognizer(Path("models"))
-        else:
-            recognizer = CustomChessRecognizer(Path("models"), custom_model_path)
-        
-        logger.info("Models loaded successfully")
-        return True
-    except Exception as e:
-        logger.error(f"Failed to load models: {e}")
-        return False
-
-def encode_image(img, max_width=800, max_height=600):
-    """Convert a numpy array image to base64 string with optional resizing."""
-    try:
-        if img is None:
-            return None
-        
-        # Ensure image is in the correct format
-        if len(img.shape) == 3 and img.shape[2] == 3:
-            # BGR to RGB conversion for better compatibility
-            img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        else:
-            img_rgb = img
-        
-        # Resize image if it's too large for mobile display
-        height, width = img_rgb.shape[:2]
-        if width > max_width or height > max_height:
-            # Calculate new dimensions maintaining aspect ratio
-            aspect_ratio = width / height
-            if width > height:
-                new_width = max_width
-                new_height = int(max_width / aspect_ratio)
-            else:
-                new_height = max_height
-                new_width = int(max_height * aspect_ratio)
+        if isinstance(image, np.ndarray):
+            # Convert BGR to RGB if needed
+            if len(image.shape) == 3 and image.shape[2] == 3:
+                image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             
-            # Resize the image
-            img_rgb = cv2.resize(img_rgb, (new_width, new_height), interpolation=cv2.INTER_AREA)
-            logger.info(f"Resized debug image from {width}x{height} to {new_width}x{new_height}")
+            # Resize if needed
+            h, w = image.shape[:2]
+            if w > max_width or h > max_height:
+                scale = min(max_width / w, max_height / h)
+                new_w, new_h = int(w * scale), int(h * scale)
+                image = cv2.resize(image, (new_w, new_h))
             
-        # Encode as PNG for better quality
-        _, buffer = cv2.imencode('.png', img_rgb)
-        return base64.b64encode(buffer).decode('utf-8')
+            # Convert to PIL Image for better format handling
+            pil_image = Image.fromarray(image)
+            
+            # Convert to base64
+            buffer = io.BytesIO()
+            pil_image.save(buffer, format='PNG')
+            img_str = base64.b64encode(buffer.getvalue()).decode()
+            return f"data:image/png;base64,{img_str}"
+        
+        return None
     except Exception as e:
         logger.error(f"Failed to encode image: {e}")
         return None
 
-def fen_to_board_2d(fen):
-    """Convert a FEN string to a 2D board representation for UI display."""
+def create_board_focus_debug_image(img, corners):
+    """Create a debug image showing the board focus area."""
     try:
-        # Parse the FEN string to get the board position
-        board_part = fen.split(' ')[0]  # Get just the board part, ignore other FEN components
-        
-        # Create 8x8 board
-        board_2d = []
-        
-        # Process each rank (row)
-        ranks = board_part.split('/')
-        for rank in ranks:
-            row = []
-            for char in rank:
-                if char.isdigit():
-                    # Add empty squares
-                    for _ in range(int(char)):
-                        row.append('.')
-                else:
-                    # Add piece
-                    row.append(char)
-            board_2d.append(row)
-        
-        return board_2d
-    except Exception as e:
-        logger.error(f"Failed to convert FEN to 2D board: {e}")
-        # Return empty board on error
-        return [['.' for _ in range(8)] for _ in range(8)]
-
-def create_chess_board_visualization(board, max_width=400, max_height=400):
-    """Create a visual representation of the detected chess board."""
-    try:
-        # Create a chess board image
-        board_size = 400
-        square_size = board_size // 8
-        
-        # Create image with white background
-        img = np.ones((board_size, board_size, 3), dtype=np.uint8) * 255
-        
-        # Draw chess board pattern
-        for rank in range(8):
-            for file in range(8):
-                if (rank + file) % 2 == 0:
-                    color = (240, 240, 240)  # Light square
-                else:
-                    color = (120, 120, 120)  # Dark square
-                
-                x1 = file * square_size
-                y1 = rank * square_size
-                x2 = x1 + square_size
-                y2 = y1 + square_size
-                
-                cv2.rectangle(img, (x1, y1), (x2, y2), color, -1)
-        
-        # Draw pieces
-        piece_symbols = {
-            'P': '♙', 'R': '♖', 'N': '♘', 'B': '♗', 'Q': '♕', 'K': '♔',
-            'p': '♟', 'r': '♜', 'n': '♞', 'b': '♝', 'q': '♛', 'k': '♚'
-        }
-        
-        for square in chess.SQUARES:
-            piece = board.piece_at(square)
-            if piece:
-                rank = chess.square_rank(square)
-                file = chess.square_file(square)
-                
-                # Convert to board coordinates (flip rank for display)
-                display_rank = 7 - rank
-                display_file = file
-                
-                # Calculate position
-                x = display_file * square_size + square_size // 2
-                y = display_rank * square_size + square_size // 2
-                
-                # Get piece symbol
-                piece_char = piece.symbol()
-                if piece.color == chess.WHITE:
-                    piece_char = piece_char.upper()
-                else:
-                    piece_char = piece_char.lower()
-                
-                symbol = piece_symbols.get(piece_char, piece_char)
-                
-                # Convert to PIL for text rendering
-                pil_img = Image.fromarray(img)
-                draw = ImageDraw.Draw(pil_img)
-                
-                # Try to use a font, fallback to default if not available
-                try:
-                    font = ImageFont.truetype("/System/Library/Fonts/Arial.ttf", 30)
-                except:
-                    font = ImageFont.load_default()
-                
-                # Draw piece
-                color = (0, 0, 0) if piece.color == chess.WHITE else (255, 255, 255)
-                draw.text((x-10, y-15), symbol, fill=color, font=font)
-                
-                img = np.array(pil_img)
-        
-        # Resize if needed
-        height, width = img.shape[:2]
-        if width > max_width or height > max_height:
-            aspect_ratio = width / height
-            if width > height:
-                new_width = max_width
-                new_height = int(max_width / aspect_ratio)
-            else:
-                new_height = max_height
-                new_width = int(max_height * aspect_ratio)
-            
-            img = cv2.resize(img, (new_width, new_height), interpolation=cv2.INTER_AREA)
-        
-        return img
-    except Exception as e:
-        logger.error(f"Failed to create chess board visualization: {e}")
-        return None
-
-def create_square_grid_visualization(warped_img, occupancy_results, piece_results, max_width=600, max_height=600):
-    """Create a visualization showing all 64 squares with their classification results."""
-    try:
-        # Create a grid of squares
-        grid_size = 8
-        square_size = 60
-        margin = 10
-        total_size = grid_size * square_size + (grid_size + 1) * margin
-        
-        # Create image with white background
-        img = np.ones((total_size, total_size, 3), dtype=np.uint8) * 255
-        
-        # Draw grid
-        for rank in range(8):
-            for file in range(8):
-                square = chess.square(file, 7 - rank)  # Convert to chess square
-                
-                # Calculate position
-                x = file * square_size + (file + 1) * margin
-                y = rank * square_size + (rank + 1) * margin
-                
-                # Determine square color
-                if (rank + file) % 2 == 0:
-                    color = (240, 240, 240)  # Light square
-                else:
-                    color = (120, 120, 120)  # Dark square
-                
-                # Draw square
-                cv2.rectangle(img, (x, y), (x + square_size, y + square_size), color, -1)
-                cv2.rectangle(img, (x, y), (x + square_size, y + square_size), (0, 0, 0), 1)
-                
-                # Add occupancy result
-                if occupancy_results[square]:
-                    cv2.circle(img, (x + square_size//2, y + square_size//2), 5, (0, 255, 0), -1)
-                
-                # Add piece result if available
-                if piece_results and piece_results[square]:
-                    piece = piece_results[square]
-                    piece_char = piece.symbol()
-                    if piece.color == chess.WHITE:
-                        piece_char = piece_char.upper()
-                    else:
-                        piece_char = piece_char.lower()
-                    
-                    # Convert to PIL for text rendering
-                    pil_img = Image.fromarray(img)
-                    draw = ImageDraw.Draw(pil_img)
-                    
-                    try:
-                        font = ImageFont.truetype("/System/Library/Fonts/Arial.ttf", 20)
-                    except:
-                        font = ImageFont.load_default()
-                    
-                    color = (0, 0, 0) if piece.color == chess.WHITE else (255, 255, 255)
-                    draw.text((x + 5, y + 5), piece_char, fill=color, font=font)
-                    
-                    img = np.array(pil_img)
-        
-        # Resize if needed
-        height, width = img.shape[:2]
-        if width > max_width or height > max_height:
-            aspect_ratio = width / height
-            if width > height:
-                new_width = max_width
-                new_height = int(max_width / aspect_ratio)
-            else:
-                new_height = max_height
-                new_width = int(max_height * aspect_ratio)
-            
-            img = cv2.resize(img, (new_width, new_height), interpolation=cv2.INTER_AREA)
-        
-        return encode_image(img)
-    except Exception as e:
-        logger.error(f"Failed to create square grid visualization: {e}")
-        return None
-
-def create_board_focus_debug_image(img: np.ndarray, corners: np.ndarray) -> np.ndarray:
-    """
-    Create a debug image showing the original image with the board area clearly visible
-    and everything outside the detected corners blurred.
-    
-    Args:
-        img: Original image
-        corners: Corner coordinates as numpy array of shape (4, 2)
-    
-    Returns:
-        Debug image with board area clear and outside area blurred
-    """
-    try:
-        # Create a copy of the original image
+        # Create a copy of the image
         debug_img = img.copy()
-        
-        # Sort corners to ensure consistent order
-        from chesscog.core import sort_corner_points
-        sorted_corners = sort_corner_points(corners)
         
         # Create a mask for the board area
         mask = np.zeros(img.shape[:2], dtype=np.uint8)
+        corners_int = corners.astype(np.int32)
+        cv2.fillPoly(mask, [corners_int], 255)
         
-        # Convert corners to integer coordinates for the mask
-        corner_points = sorted_corners.astype(np.int32)
+        # Apply Gaussian blur to non-board areas
+        blurred = cv2.GaussianBlur(img, (51, 51), 0)
         
-        # Fill the board area with white (255)
-        cv2.fillPoly(mask, [corner_points], 255)
+        # Combine original board area with blurred background
+        debug_img = np.where(mask[:, :, np.newaxis] == 255, img, blurred)
         
-        # Create a blurred version of the entire image
-        blurred_img = cv2.GaussianBlur(img, (51, 51), 0)
+        # Draw corner points
+        for i, corner in enumerate(corners_int):
+            cv2.circle(debug_img, tuple(corner), 10, (0, 255, 0), -1)
+            cv2.putText(debug_img, str(i+1), tuple(corner), 
+                       cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
         
-        # Combine the original image (board area) with blurred image (outside area)
-        # Where mask is 255 (board area), use original image
-        # Where mask is 0 (outside area), use blurred image
-        debug_img = np.where(mask[:, :, np.newaxis] == 255, img, blurred_img)
-        
-        # Draw corner points and board outline for clarity
-        for i, corner in enumerate(sorted_corners):
-            x, y = int(corner[0]), int(corner[1])
-            # Draw corner points
-            cv2.circle(debug_img, (x, y), 8, (0, 255, 0), -1)  # Green filled circle
-            cv2.circle(debug_img, (x, y), 8, (0, 0, 0), 2)    # Black outline
-            # Add corner labels
-            cv2.putText(debug_img, str(i+1), (x+10, y-10), 
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
-        
-        # Draw board outline
-        cv2.polylines(debug_img, [corner_points], True, (0, 255, 0), 3)
-        
-        return debug_img.astype(np.uint8)
-        
+        return debug_img
     except Exception as e:
         logger.error(f"Failed to create board focus debug image: {e}")
-        return img  # Return original image if processing fails
-
-def generate_position_description(board, color_perspective="white"):
-    """
-    Generate a human-readable description of the chess position.
-    
-    Args:
-        board: chess.Board object
-        color_perspective: "white" or "black" perspective
-    
-    Returns:
-        str: Human-readable description of the position
-    """
-    piece_map = board.piece_map()
-    
-    if not piece_map:
-        return "The board is empty with no pieces."
-    
-    # Group pieces by color and type
-    white_pieces = {}
-    black_pieces = {}
-    
-    for square, piece in piece_map.items():
-        square_name = chess.square_name(square)
-        piece_symbol = piece.symbol()
-        piece_name = {
-            'P': 'Pawn', 'R': 'Rook', 'N': 'Knight', 
-            'B': 'Bishop', 'Q': 'Queen', 'K': 'King'
-        }.get(piece_symbol.upper(), piece_symbol)
-        
-        if piece.color:  # White piece
-            if piece_name not in white_pieces:
-                white_pieces[piece_name] = []
-            white_pieces[piece_name].append(square_name)
-        else:  # Black piece
-            if piece_name not in black_pieces:
-                black_pieces[piece_name] = []
-            black_pieces[piece_name].append(square_name)
-    
-    # Build description
-    description_parts = []
-    
-    # White pieces
-    if white_pieces:
-        white_desc = []
-        for piece_name, squares in white_pieces.items():
-            if len(squares) == 1:
-                white_desc.append(f"White {piece_name} on {squares[0]}")
-            else:
-                white_desc.append(f"White {piece_name}s on {', '.join(squares)}")
-        description_parts.append("White pieces: " + "; ".join(white_desc))
-    
-    # Black pieces
-    if black_pieces:
-        black_desc = []
-        for piece_name, squares in black_pieces.items():
-            if len(squares) == 1:
-                black_desc.append(f"Black {piece_name} on {squares[0]}")
-            else:
-                black_desc.append(f"Black {piece_name}s on {', '.join(squares)}")
-        description_parts.append("Black pieces: " + "; ".join(black_desc))
-    
-    # Add turn information
-    turn = "White" if board.turn else "Black"
-    description_parts.append(f"{turn} to move")
-    
-    # Add castling rights
-    castling_rights = []
-    if board.has_kingside_castling_rights(chess.WHITE):
-        castling_rights.append("White kingside")
-    if board.has_queenside_castling_rights(chess.WHITE):
-        castling_rights.append("White queenside")
-    if board.has_kingside_castling_rights(chess.BLACK):
-        castling_rights.append("Black kingside")
-    if board.has_queenside_castling_rights(chess.BLACK):
-        castling_rights.append("Black queenside")
-    
-    if castling_rights:
-        description_parts.append(f"Castling available: {', '.join(castling_rights)}")
-    
-    # Add en passant if available
-    if board.ep_square:
-        ep_square = chess.square_name(board.ep_square)
-        description_parts.append(f"En passant available on {ep_square}")
-    
-    return ". ".join(description_parts) + "."
-
-def parse_cursor_description_to_board(description: str) -> chess.Board:
-    """
-    Parse Cursor's image description to build a chess board.
-    
-    Args:
-        description: The image description from Cursor (e.g., "White Queen on e2, Black Pawn on e4...")
-    
-    Returns:
-        chess.Board: The constructed chess board
-    """
-    board = chess.Board()
-    board.clear()
-    
-    # Common piece mappings
-    piece_map = {
-        'white pawn': chess.Piece(chess.PAWN, chess.WHITE),
-        'white rook': chess.Piece(chess.ROOK, chess.WHITE),
-        'white knight': chess.Piece(chess.KNIGHT, chess.WHITE),
-        'white bishop': chess.Piece(chess.BISHOP, chess.WHITE),
-        'white queen': chess.Piece(chess.QUEEN, chess.WHITE),
-        'white king': chess.Piece(chess.KING, chess.WHITE),
-        'black pawn': chess.Piece(chess.PAWN, chess.BLACK),
-        'black rook': chess.Piece(chess.ROOK, chess.BLACK),
-        'black knight': chess.Piece(chess.KNIGHT, chess.BLACK),
-        'black bishop': chess.Piece(chess.BISHOP, chess.BLACK),
-        'black queen': chess.Piece(chess.QUEEN, chess.BLACK),
-        'black king': chess.Piece(chess.KING, chess.BLACK),
-        # Handle variations in naming
-        'pawn': chess.Piece(chess.PAWN, chess.BLACK),  # Default to black if color not specified
-        'rook': chess.Piece(chess.ROOK, chess.BLACK),
-        'knight': chess.Piece(chess.KNIGHT, chess.BLACK),
-        'bishop': chess.Piece(chess.BISHOP, chess.BLACK),
-        'queen': chess.Piece(chess.QUEEN, chess.BLACK),
-        'king': chess.Piece(chess.KING, chess.BLACK),
-    }
-    
-    # Square mapping
-    square_map = {
-        'a1': chess.A1, 'a2': chess.A2, 'a3': chess.A3, 'a4': chess.A4,
-        'a5': chess.A5, 'a6': chess.A6, 'a7': chess.A7, 'a8': chess.A8,
-        'b1': chess.B1, 'b2': chess.B2, 'b3': chess.B3, 'b4': chess.B4,
-        'b5': chess.B5, 'b6': chess.B6, 'b7': chess.B7, 'b8': chess.B8,
-        'c1': chess.C1, 'c2': chess.C2, 'c3': chess.C3, 'c4': chess.C4,
-        'c5': chess.C5, 'c6': chess.C6, 'c7': chess.C7, 'c8': chess.C8,
-        'd1': chess.D1, 'd2': chess.D2, 'd3': chess.D3, 'd4': chess.D4,
-        'd5': chess.D5, 'd6': chess.D6, 'd7': chess.D7, 'd8': chess.D8,
-        'e1': chess.E1, 'e2': chess.E2, 'e3': chess.E3, 'e4': chess.E4,
-        'e5': chess.E5, 'e6': chess.E6, 'e7': chess.E7, 'e8': chess.E8,
-        'f1': chess.F1, 'f2': chess.F2, 'f3': chess.F3, 'f4': chess.F4,
-        'f5': chess.F5, 'f6': chess.F6, 'f7': chess.F7, 'f8': chess.F8,
-        'g1': chess.G1, 'g2': chess.G2, 'g3': chess.G3, 'g4': chess.G4,
-        'g5': chess.G5, 'g6': chess.G6, 'g7': chess.G7, 'g8': chess.G8,
-        'h1': chess.H1, 'h2': chess.H2, 'h3': chess.H3, 'h4': chess.H4,
-        'h5': chess.H5, 'h6': chess.H6, 'h7': chess.H7, 'h8': chess.H8,
-    }
-    
-    # Parse the description
-    description_lower = description.lower()
-    
-    # Look for piece patterns like "White Queen on e2" or "Black Pawn on e4"
-    import re
-    
-    # Enhanced patterns to handle Cursor's bullet-pointed format
-    patterns = [
-        # Original patterns
-        r'(\w+)\s+(pawn|rook|knight|bishop|queen|king)\s+on\s+([a-h][1-8])',
-        r'(\w+)\s+(pawn|rook|knight|bishop|queen|king)\s+positioned\s+on\s+([a-h][1-8])',
-        r'(\w+)\s+(pawn|rook|knight|bishop|queen|king)\s+at\s+([a-h][1-8])',
-        r'a\s+(\w+)\s+(pawn|rook|knight|bishop|queen|king)\s+is\s+positioned\s+on\s+([a-h][1-8])',
-        r'a\s+(\w+)\s+(pawn|rook|knight|bishop|queen|king)\s+is\s+on\s+([a-h][1-8])',
-        # New patterns for Cursor's bullet-pointed format
-        r'a\s+(\w+)\s+(pawn|rook|knight|bishop|queen|king)\s+is\s+positioned\s+on\s+square\s+([a-h][1-8])',
-        r'a\s+(\w+)\s+(pawn|rook|knight|bishop|queen|king)\s+is\s+positioned\s+on\s+([a-h][1-8])',
-        r'(\w+)\s+(pawn|rook|knight|bishop|queen|king)\s+is\s+positioned\s+on\s+square\s+([a-h][1-8])',
-        r'(\w+)\s+(pawn|rook|knight|bishop|queen|king)\s+is\s+positioned\s+on\s+([a-h][1-8])',
-        # Handle "lying on its side" or other variations
-        r'a\s+(\w+)\s+(pawn|rook|knight|bishop|queen|king)\s+is\s+lying\s+on\s+its\s+side\s+on\s+square\s+([a-h][1-8])',
-        r'a\s+(\w+)\s+(pawn|rook|knight|bishop|queen|king)\s+is\s+lying\s+on\s+its\s+side\s+on\s+([a-h][1-8])',
-        # Additional patterns for "positioned upright" format
-        r'a\s+(\w+)\s+(pawn|rook|knight|bishop|queen|king)\s+is\s+positioned\s+upright\s+on\s+square\s+([a-h][1-8])',
-        r'a\s+(\w+)\s+(pawn|rook|knight|bishop|queen|king)\s+positioned\s+upright\s+on\s+square\s+([a-h][1-8])',
-    ]
-    
-    pieces_found = []
-    found_squares = set()  # Track squares to avoid duplicates
-    
-    # Process each line separately to handle bullet points
-    lines = description.split('\n')
-    for line in lines:
-        line = line.strip()
-        if not line or line.startswith('#'):  # Skip empty lines and comments
-            continue
-            
-        # Remove bullet points and extra whitespace
-        line = re.sub(r'^[-•*]\s*', '', line)  # Remove bullet points
-        # Also handle asterisks with different spacing patterns
-        line = re.sub(r'^\*\s*', '', line)  # Remove asterisk bullet points
-        # Remove bold formatting **text** -> text
-        line = re.sub(r'\*\*([^*]+)\*\*', r'\1', line)  # Remove **bold** formatting
-        line = line.strip()
-        
-        if not line:
-            continue
-            
-        line_lower = line.lower()
-        
-        # Try all patterns on this line
-        for pattern in patterns:
-            matches = re.findall(pattern, line_lower)
-            for match in matches:
-                color, piece_type, square = match
-                piece_key = f"{color} {piece_type}"
-                
-                if piece_key in piece_map and square in square_map:
-                    # Only add if we haven't already found a piece on this square
-                    if square not in found_squares:
-                        pieces_found.append((piece_map[piece_key], square_map[square]))
-                        found_squares.add(square)
-                        logger.info(f"Found piece: {piece_key} on {square}")
-                    else:
-                        logger.info(f"Skipping duplicate piece on {square}")
-    
-    # Also look for patterns without explicit color (like "pawn on e4") in the full description
-    simple_patterns = [
-        r'(pawn|rook|knight|bishop|queen|king)\s+on\s+([a-h][1-8])',
-        r'(pawn|rook|knight|bishop|queen|king)\s+positioned\s+on\s+([a-h][1-8])',
-        r'(pawn|rook|knight|bishop|queen|king)\s+at\s+([a-h][1-8])',
-    ]
-    
-    for pattern in simple_patterns:
-        matches = re.findall(pattern, description_lower)
-        for match in matches:
-            piece_type, square = match
-            piece_key = piece_type  # Use default color (black)
-            
-            if piece_key in piece_map and square in square_map:
-                pieces_found.append((piece_map[piece_key], square_map[square]))
-                logger.info(f"Found piece (no color): {piece_key} on {square}")
-    
-    # Place pieces on the board
-    for piece, square in pieces_found:
-        board.set_piece_at(square, piece)
-    
-    logger.info(f"Parsed {len(pieces_found)} pieces from description: {pieces_found}")
-    
-    return board
-
-def generate_cursor_style_description(board, img_shape, filename):
-    """
-    Generate a cursor-style description of the chess position and image.
-    
-    Args:
-        board: Chess board object
-        img_shape: Shape of the input image
-        filename: Original image filename
-    
-    Returns:
-        String containing cursor-style description
-    """
-    # Count pieces
-    piece_map = board.piece_map()
-    white_pieces = []
-    black_pieces = []
-    
-    for square, piece in piece_map.items():
-        square_name = chess.square_name(square)
-        piece_name = piece.symbol().upper()
-        if piece.color == chess.WHITE:
-            white_pieces.append(f"{piece_name} on {square_name}")
-        else:
-            black_pieces.append(f"{piece_name} on {square_name}")
-    
-    total_pieces = len(piece_map)
-    
-    # Generate description
-    description = f"""This image displays a chess board with {total_pieces} pieces on it, viewed from a slightly elevated angle.
-
-**High-Level Description:**
-The image shows a standard 8x8 chess board with alternating dark green and off-white squares. The board is oriented with algebraic notation visible along its edges. There are {total_pieces} pieces on the board: {len(white_pieces)} white pieces and {len(black_pieces)} black pieces.
-
-**Detailed Description:**
-*   **Chess Board:**
-    *   The board is a standard 8x8 grid, featuring dark green and off-white (or cream) squares.
-    *   It is oriented with algebraic notation: files 'a' through 'h' are labeled along the left and right edges, and ranks '1' through '8' are labeled along the top and bottom edges.
-    *   The "US CHESS FEDERATION" logo is visible on the 'c' file, between ranks 4 and 5, on the left side of the board.
-    *   The board appears to be a flexible mat, possibly made of vinyl, and shows some minor surface imperfections or creases.
-*   **Chess Pieces:**
-    *   There are {total_pieces} pieces on the board.
-    *   **White Pieces ({len(white_pieces)}):**
-"""
-    
-    for piece in white_pieces:
-        description += f"        *   A **white {piece.split()[0].lower()}** is positioned on square **{piece.split()[-1]}**.\n"
-    
-    description += f"    *   **Black Pieces ({len(black_pieces)}):**\n"
-    
-    for piece in black_pieces:
-        description += f"        *   A **black {piece.split()[0].lower()}** is positioned on square **{piece.split()[-1]}**.\n"
-    
-    description += """*   **Overall Scene:**
-    *   The board is placed on a light-colored surface, possibly wood, which is visible around the edges of the board.
-    *   The background beyond the board is a solid dark gray, suggesting the image might be cropped or the board is on a dark, unlit surface.
-    *   All pieces appear to be standard Staunton-style pieces."""
-    
-    return description
-
-def board_to_2d(board):
-    """
-    Convert a python-chess Board to a 2D array (8x8) of piece symbols ('.' for empty squares).
-    Ranks are 8 (top) to 1 (bottom), files are a (left) to h (right).
-    """
-    board_2d = []
-    for rank in range(8, 0, -1):  # 8 to 1
-        row = []
-        for file in range(8):  # 0 to 7 (a to h)
-            square = chess.square(file, rank - 1)
-            piece = board.piece_at(square)
-            row.append(piece.symbol() if piece else '.')
-        board_2d.append(row)
-    return board_2d
+        return img
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialize models on startup."""
-    logger.info("Starting Chess Position Scanner API...")
+    """Initialize models and configurations on startup."""
+    global cfg, recognizer, custom_piece_model, custom_piece_transforms
+    
     try:
-        # Run model loading in a thread pool to avoid blocking the event loop
-        import asyncio
-        loop = asyncio.get_event_loop()
-        result = await loop.run_in_executor(None, load_models)
-        if not result:
-            logger.error("Failed to load models during startup")
-            raise RuntimeError("Failed to load models")
+        logger.info("Starting up Chess Position Scanner API...")
+        
+        # Load configuration
+        logger.info("Loading configuration...")
+        cfg = CN.load_yaml_with_base('config/recognition.yaml')
+        logger.info("Configuration loaded successfully")
+        
+        # Initialize the custom recognizer
+        logger.info("Initializing custom chess recognizer...")
+        recognizer = CustomChessRecognizer(cfg)
+        logger.info("Custom chess recognizer initialized successfully")
+        
+        # Test model loading
+        logger.info("Testing model loading...")
+        if recognizer.custom_piece_model is not None:
+            logger.info("Custom piece model loaded successfully")
+        else:
+            logger.warning("Custom piece model not available, using default")
+        
         logger.info("Startup completed successfully")
     except Exception as e:
         logger.error(f"Startup failed: {e}")
         raise RuntimeError(f"Startup failed: {e}")
-
-@app.get("/")
-async def root():
-    """Health check endpoint."""
-    return {"message": "Chess Position Scanner API is running", "status": "healthy"}
-
-@app.get("/health")
-async def health_check():
-    """Detailed health check endpoint."""
-    models_loaded = cfg is not None and recognizer is not None
-    return {
-        "status": "healthy" if models_loaded else "unhealthy",
-        "models_loaded": models_loaded,
-        "timestamp": time.time()
-    }
-
-@app.post("/recognize_chess_position")
-async def recognize_chess_position(
-    image: UploadFile = File(...), 
-    color: str = "white",
-    debug_image_width: int = 800,
-    debug_image_height: int = 600
-):
-    """
-    Recognize chess position from uploaded image.
-    
-    Args:
-        image: Chess board image (JPEG or PNG)
-        color: Color to play as ("white" or "black")
-        debug_image_width: Maximum width for debug images
-        debug_image_height: Maximum height for debug images
-    
-    Returns:
-        JSON with FEN notation, ASCII board, Lichess URL, legal position status, and debug images
-    """
-    if not cfg or not recognizer:
-        raise HTTPException(status_code=503, detail="Models not loaded")
-    
-    # Validate image type
-    if image.content_type not in ["image/jpeg", "image/png", "image/jpg"]:
-        raise HTTPException(
-            status_code=400, 
-            detail="Unsupported image type. Use JPEG or PNG."
-        )
-    
-    try:
-        # Read and decode image
-        img_bytes = await image.read()
-        np_arr = np.frombuffer(img_bytes, np.uint8)
-        img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
-        
-        if img is None:
-            raise HTTPException(status_code=400, detail="Failed to decode image")
-        
-        logger.info(f"Processing image: {image.filename}, shape: {img.shape}")
-        
-        # Validate color parameter
-        if color not in ["white", "black"]:
-            color = "white"  # Default to white
-        
-        chess_color = chess.WHITE if color == "white" else chess.BLACK
-        
-        # Perform recognition with debug images
-        logger.info("Performing chess recognition with debug images...")
-        board, corners, debug_images = recognizer.predict_with_debug(img, chess_color)
-        
-        # Save debug images to disk
-        import os
-        debug_output_dir = "debug_outputs"
-        os.makedirs(debug_output_dir, exist_ok=True)
-        
-        # Save each debug image (overwriting previous versions)
-        debug_image_paths = {}
-        
-        for key, img in debug_images.items():
-            if isinstance(img, np.ndarray):
-                filename = f"{key}.png"
-                filepath = os.path.join(debug_output_dir, filename)
-                cv2.imwrite(filepath, img)
-                debug_image_paths[key] = filepath
-                logger.info(f"Saved debug image: {filepath}")
-        
-        # Convert debug images to base64
-        debug_images_base64 = {}
-        for key, img in debug_images.items():
-            encoded = encode_image(img, debug_image_width, debug_image_height)
-            if encoded:
-                debug_images_base64[key] = encoded
-        
-        # Generate results
-        fen = board.fen()
-        ascii_board = str(board)
-        lichess_url = f"https://lichess.org/editor/{fen}?color={color}"
-        legal = board.is_valid()
-        
-        # Generate human-readable description
-        position_description = generate_position_description(board, color)
-        
-        logger.info(f"Recognition successful: FEN={fen}, Legal={legal}")
-        
-        return JSONResponse(
-            content={
-                "fen": fen,
-                "ascii": ascii_board,
-                "lichess_url": lichess_url,
-                "legal_position": legal,
-                "position_description": position_description,
-                "debug_images": debug_images_base64,
-                "debug_image_paths": debug_image_paths,
-                "corners": corners.tolist() if corners is not None else None,
-                "processing_time": time.time(),
-                "image_info": {
-                    "filename": image.filename,
-                    "content_type": image.content_type,
-                    "size_bytes": len(img_bytes),
-                    "shape": img.shape
-                },
-                "debug_info": {
-                    "corner_detection": "Completed",
-                    "board_warping": "Completed",
-                    "position_detection": "Completed",
-                    "visualization": "Completed",
-                    "description_generation": "Completed"
-                }
-            }
-        )
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Recognition failed: {str(e)}")
-        logger.error(traceback.format_exc())
-        raise HTTPException(
-            status_code=500, 
-            detail=f"Recognition failed: {str(e)}"
-        )
-
-@app.post("/detect_corners")
-async def detect_corners(image: UploadFile = File(...)):
-    """
-    Detect chess board corners from uploaded image.
-    
-    Args:
-        image: Chess board image (JPEG or PNG)
-    
-    Returns:
-        JSON with detected corners and debug images
-    """
-    if not cfg:
-        raise HTTPException(status_code=503, detail="Models not loaded")
-    
-    # Validate image type
-    if image.content_type not in ["image/jpeg", "image/png", "image/jpg"]:
-        raise HTTPException(
-            status_code=400, 
-            detail="Unsupported image type. Use JPEG or PNG."
-        )
-    
-    try:
-        # Read and decode image
-        img_bytes = await image.read()
-        np_arr = np.frombuffer(img_bytes, np.uint8)
-        img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
-        
-        if img is None:
-            raise HTTPException(status_code=400, detail="Failed to decode image")
-        
-        logger.info(f"Detecting corners for image: {image.filename}")
-        
-        # Perform corner detection
-        corners, debug_images = find_corners(cfg, img)
-        
-        # Convert debug images to base64
-        debug_images_base64 = {}
-        for key, img in debug_images.items():
-            encoded = encode_image(img, 800, 600)
-            if encoded:
-                debug_images_base64[key] = encoded
-        
-        # Convert corners to list format for JSON serialization
-        corners_list = corners.tolist() if corners is not None else None
-        
-        logger.info(f"Corner detection successful: {len(corners_list) if corners_list else 0} corners")
-        
-        return JSONResponse(
-            content={
-                "corners": corners_list,
-                "message": "Successfully detected chessboard corners",
-                "debug_images": debug_images_base64,
-                "processing_time": time.time(),
-                "image_info": {
-                    "filename": image.filename,
-                    "content_type": image.content_type,
-                    "size_bytes": len(img_bytes),
-                    "shape": img.shape
-                }
-            }
-        )
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Corner detection failed: {str(e)}")
-        logger.error(traceback.format_exc())
-        raise HTTPException(
-            status_code=500, 
-            detail=f"Corner detection failed: {str(e)}"
-        )
 
 @app.post("/recognize_chess_position_with_corners")
 async def recognize_chess_position_with_corners(
@@ -1167,801 +345,155 @@ async def recognize_chess_position_with_corners(
             board.clear()
             
             # Place pieces on the board
-            for square, piece in zip(recognizer._squares, pieces):
-                if piece is not None:
-                    board.set_piece_at(square, piece)
-            
-            # Set the turn
-            board.turn = turn
+            for rank in range(8):
+                for file in range(8):
+                    if occupancy[rank, file] and pieces[rank, file] is not None:
+                        square = chess.square(file, 7 - rank)  # Convert to chess square (a1 is bottom-left)
+                        board.set_piece_at(square, pieces[rank, file])
             
             # Generate results
             fen = board.fen()
             ascii_board = str(board)
-            lichess_url = f"https://lichess.org/editor/{fen}?color={color.lower()}"
+            lichess_url = f"https://lichess.org/editor/{fen}?color={color}"
             legal = board.is_valid()
             
-            logger.info(f"Recognition successful: FEN={fen}, Legal={legal}")
+            # Count pieces found
+            piece_count = len(board.piece_map())
+            
+            # Generate human-readable description
+            position_description = generate_position_description(board, color)
+            
+            # Convert debug images to base64
+            debug_images_base64 = {}
+            for key, img in debug_images.items():
+                encoded = encode_image(img, debug_image_width, debug_image_height)
+                if encoded:
+                    debug_images_base64[key] = encoded
+            
+            # Get image info
+            height, width = img.shape[:2]
+            image_info = {
+                "filename": image.filename,
+                "content_type": image.content_type,
+                "size_bytes": len(img_bytes),
+                "shape": [height, width, 3]
+            }
+            
+            # Create debug info
+            debug_info = {
+                "corner_detection": "Manual (provided by user)",
+                "board_warping": "Completed",
+                "position_detection": "Completed",
+                "visualization": "Completed",
+                "description_generation": "Completed"
+            }
+            
+            logger.info(f"Recognition successful: FEN={fen}, Legal={legal}, Pieces={piece_count}")
+            
+            return JSONResponse(
+                content={
+                    "fen": fen,
+                    "ascii": ascii_board,
+                    "lichess_url": lichess_url,
+                    "legal_position": legal,
+                    "position_description": position_description,
+                    "debug_images": debug_images_base64,
+                    "corners": corner_coords,
+                    "processing_time": time.time(),
+                    "image_info": image_info,
+                    "debug_info": debug_info
+                }
+            )
             
         except Exception as e:
-            logger.error(f"Recognition failed: {str(e)}")
-            raise HTTPException(status_code=500, detail=f"Recognition failed: {str(e)}")
-        
-        # Save debug images to disk
-        import os
-        debug_output_dir = "debug_outputs"
-        os.makedirs(debug_output_dir, exist_ok=True)
-        
-        # Save each debug image (overwriting previous versions)
-        debug_image_paths = {}
-        
-        for key, img in debug_images.items():
-            if isinstance(img, np.ndarray):
-                filename = f"{key}.png"
-                filepath = os.path.join(debug_output_dir, filename)
-                cv2.imwrite(filepath, img)
-                debug_image_paths[key] = filepath
-                logger.info(f"Saved debug image: {filepath}")
-        
-        # Convert debug images to base64
-        debug_images_base64 = {}
-        for key, img in debug_images.items():
-            encoded = encode_image(img, debug_image_width, debug_image_height)
-            if encoded:
-                debug_images_base64[key] = encoded
-        
-        return JSONResponse(
-            content={
-                "fen": fen,
-                "ascii": ascii_board,
-                "lichess_url": lichess_url,
-                "legal_position": legal,
-                "debug_images": debug_images_base64,
-                "debug_image_paths": debug_image_paths,
-                "corners": corners_array.tolist(),
-                "processing_time": time.time(),
-                "image_info": {
-                    "filename": image.filename,
-                    "content_type": image.content_type,
-                    "size_bytes": len(img_bytes),
-                    "shape": img.shape
-                },
-                "debug_info": {
-                    "corner_detection": "Skipped (manual input)",
-                    "board_warping": "Completed",
-                    "position_detection": "Completed",
-                    "visualization": "Completed"
-                }
-            }
-        )
+            logger.error(f"Manual corner recognition failed: {str(e)}")
+            logger.error(traceback.format_exc())
+            raise HTTPException(
+                status_code=500, 
+                detail=f"Manual corner recognition failed: {str(e)}"
+            )
         
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Unexpected error: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
-
-@app.post("/recognize_chess_position_with_description")
-async def recognize_chess_position_with_description(
-    image: UploadFile = File(...), 
-    color: str = "white",
-    debug_image_width: int = 800,
-    debug_image_height: int = 600
-):
-    """
-    Recognize chess position from uploaded image and provide human-readable description.
-    
-    Args:
-        image: Chess board image (JPEG or PNG)
-        color: Color to play as ("white" or "black")
-        debug_image_width: Maximum width for debug images
-        debug_image_height: Maximum height for debug images
-    
-    Returns:
-        JSON with FEN notation, ASCII board, Lichess URL, legal position status, 
-        human-readable description, and debug images
-    """
-    if not cfg or not recognizer:
-        raise HTTPException(status_code=503, detail="Models not loaded")
-    
-    # Validate image type
-    if image.content_type not in ["image/jpeg", "image/png", "image/jpg"]:
-        raise HTTPException(
-            status_code=400, 
-            detail="Unsupported image type. Use JPEG or PNG."
-        )
-    
-    try:
-        # Read and decode image
-        img_bytes = await image.read()
-        np_arr = np.frombuffer(img_bytes, np.uint8)
-        img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
-        
-        if img is None:
-            raise HTTPException(status_code=400, detail="Failed to decode image")
-        
-        logger.info(f"Processing image: {image.filename}, shape: {img.shape}")
-        
-        # Validate color parameter
-        if color not in ["white", "black"]:
-            color = "white"  # Default to white
-        
-        chess_color = chess.WHITE if color == "white" else chess.BLACK
-        
-        # Perform recognition with debug images
-        logger.info("Performing chess recognition with debug images...")
-        board, corners, debug_images = recognizer.predict_with_debug(img, chess_color)
-        
-        # Save debug images to disk
-        import os
-        debug_output_dir = "debug_outputs"
-        os.makedirs(debug_output_dir, exist_ok=True)
-        
-        # Save each debug image (overwriting previous versions)
-        debug_image_paths = {}
-        
-        for key, img in debug_images.items():
-            if isinstance(img, np.ndarray):
-                filename = f"{key}.png"
-                filepath = os.path.join(debug_output_dir, filename)
-                cv2.imwrite(filepath, img)
-                debug_image_paths[key] = filepath
-                logger.info(f"Saved debug image: {filepath}")
-        
-        # Convert debug images to base64
-        debug_images_base64 = {}
-        for key, img in debug_images.items():
-            encoded = encode_image(img, debug_image_width, debug_image_height)
-            if encoded:
-                debug_images_base64[key] = encoded
-        
-        # Generate results
-        fen = board.fen()
-        ascii_board = str(board)
-        lichess_url = f"https://lichess.org/editor/{fen}?color={color}"
-        legal = board.is_valid()
-        
-        # Generate human-readable description
-        position_description = generate_position_description(board, color)
-        
-        logger.info(f"Recognition successful: FEN={fen}, Legal={legal}")
-        
-        return JSONResponse(
-            content={
-                "fen": fen,
-                "ascii": ascii_board,
-                "lichess_url": lichess_url,
-                "legal_position": legal,
-                "position_description": position_description,
-                "debug_images": debug_images_base64,
-                "debug_image_paths": debug_image_paths,
-                "corners": corners.tolist() if corners is not None else None,
-                "processing_time": time.time(),
-                "image_info": {
-                    "filename": image.filename,
-                    "content_type": image.content_type,
-                    "size_bytes": len(img_bytes),
-                    "shape": img.shape
-                },
-                "debug_info": {
-                    "corner_detection": "Completed",
-                    "board_warping": "Completed",
-                    "position_detection": "Completed",
-                    "visualization": "Completed",
-                    "description_generation": "Completed"
-                }
-            }
-        )
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Recognition failed: {str(e)}")
         logger.error(traceback.format_exc())
-        # Fallback for any recognition error - always provide a description
-        logger.info(f"Recognition failed with error: {str(e)}. Providing fallback response with description.")
-        try:
-            fallback_board = chess.Board()
-            fallback_board.clear()
-            position_description = generate_position_description(fallback_board, color)
-            
-            # Determine error type and suggestion
-            error_type = "recognition_error"
-            suggestion = "Try uploading a clearer image of the chess board."
-            
-            if "resize" in str(e).lower() or "dsize" in str(e).lower():
-                error_type = "resize_error"
-                suggestion = "Try uploading an image with different dimensions or format."
-            elif "opencv" in str(e).lower():
-                error_type = "opencv_error"
-                suggestion = "Try uploading a different image format (JPEG or PNG)."
-            elif "corner" in str(e).lower():
-                error_type = "corner_detection_error"
-                suggestion = "Try uploading an image with a clearer view of the chess board corners."
-            
-            return JSONResponse(
-                content={
-                    "fen": fallback_board.fen(),
-                    "ascii": str(fallback_board),
-                    "lichess_url": f"https://lichess.org/editor/{fallback_board.fen()}?color={color}",
-                    "legal_position": fallback_board.is_valid(),
-                    "position_description": f"⚠️ Recognition failed: {str(e)}. {position_description}",
-                    "debug_images": {},
-                    "debug_image_paths": {},
-                    "corners": None,
-                    "processing_time": time.time(),
-                    "image_info": {
-                        "filename": image.filename,
-                        "content_type": image.content_type,
-                        "size_bytes": len(img_bytes),
-                        "shape": img.shape if img is not None else None
-                    },
-                    "debug_info": {
-                        "corner_detection": "Failed",
-                        "board_warping": "Skipped",
-                        "position_detection": "Failed",
-                        "visualization": "Skipped",
-                        "description_generation": "Completed (Fallback)"
-                    },
-                    "error": {
-                        "type": error_type,
-                        "message": str(e),
-                        "suggestion": suggestion
-                    }
-                }
-            )
-        except Exception as fallback_error:
-            logger.error(f"Fallback response also failed: {fallback_error}")
         raise HTTPException(
             status_code=500, 
-            detail=f"Recognition failed: {str(e)}"
+            detail=f"Internal server error: {str(e)}"
         )
 
-@app.post("/recognize_chess_position_with_cursor_description")
-async def recognize_chess_position_with_cursor_description(
-    image: UploadFile = File(...),
-    color: str = "white"
-):
-    """
-    Recognize chess position using only the submitted image (no description parsing).
-    Args:
-        image: Chess board image (JPEG or PNG)
-        color: Color to play as ("white" or "black")
-    Returns:
-        JSON with FEN notation and 2D board mapping
-    """
-    if not cfg or not recognizer:
-        raise HTTPException(status_code=503, detail="Models not loaded")
-
-    # Validate image type
-    if image.content_type not in ["image/jpeg", "image/png", "image/jpg"]:
-        raise HTTPException(
-            status_code=400, 
-            detail="Unsupported file type. Please upload a JPEG or PNG image."
-        )
-
-    # Read image
-    contents = await image.read()
-    npimg = np.frombuffer(contents, np.uint8)
-    img = cv2.imdecode(npimg, cv2.IMREAD_COLOR)
-    if img is None:
-        raise HTTPException(status_code=400, detail="Could not decode image.")
-
-    # Use the model to recognize the chess position
+def generate_position_description(board, color):
+    """Generate a human-readable description of the chess position."""
     try:
-        board, corners, debug_images = recognizer.predict_with_debug(img, color)
-        fen = board.fen()
-        board_2d = board_to_2d(board)
-        pieces_found = sum(1 for row in board_2d for cell in row if cell != ".")
-        return {
-            "fen": fen,
-            "board_2d": board_2d,
-            "pieces_found": pieces_found
-        }
-    except Exception as e:
-        logger.error(f"Recognition failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Recognition failed: {e}")
-
-@app.post("/recognize_chess_position_with_generated_description")
-async def recognize_chess_position_with_generated_description(
-    image: UploadFile = File(...),
-    color: str = "white"
-):
-    """
-    Recognize chess position from uploaded image and generate cursor-style description.
-    
-    Args:
-        image: Chess board image (JPEG or PNG)
-        color: Color to play as ("white" or "black")
-    
-    Returns:
-        JSON with FEN notation, 2D board mapping, piece count, and cursor-style description
-    """
-    if not cfg or not recognizer:
-        raise HTTPException(status_code=503, detail="Models not loaded")
-    
-    # Validate image type
-    if image.content_type not in ["image/jpeg", "image/png", "image/jpg"]:
-        raise HTTPException(
-            status_code=400, 
-            detail="Unsupported image type. Use JPEG or PNG."
-        )
-    
-    try:
-        # Read and decode image
-        img_bytes = await image.read()
-        np_arr = np.frombuffer(img_bytes, np.uint8)
-        img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+        description_parts = []
         
-        if img is None:
-            raise HTTPException(status_code=400, detail="Failed to decode image")
+        # Count pieces by type and color
+        piece_counts = {}
+        for square in chess.SQUARES:
+            piece = board.piece_at(square)
+            if piece:
+                piece_name = piece.symbol().upper()
+                piece_color = "white" if piece.color == chess.WHITE else "black"
+                key = f"{piece_color}_{piece_name}"
+                piece_counts[key] = piece_counts.get(key, 0) + 1
         
-        logger.info(f"Processing image: {image.filename}, shape: {img.shape}")
+        # Generate description
+        if color == "white":
+            description_parts.append("You are playing as White.")
+        else:
+            description_parts.append("You are playing as Black.")
         
-        # Validate color parameter
-        if color not in ["white", "black"]:
-            color = "white"  # Default to white
-        
-        chess_color = chess.WHITE if color == "white" else chess.BLACK
-        
-        # Perform recognition
-        logger.info("Performing chess recognition...")
-        board, corners, debug_images = recognizer.predict_with_debug(img, chess_color)
-        
-        # Count pieces found
-        piece_count = len(board.piece_map())
-        
-        # Generate results
-        fen = board.fen()
-        legal = board.is_valid()
-        
-        # Generate cursor-style description
-        cursor_description = generate_cursor_style_description(board, img.shape, image.filename)
-        
-        # Create 2D board mapping
-        board_2d = []
-        for rank in range(8):
-            row = []
-            for file in range(8):
-                square = chess.square(file, 7 - rank)  # Convert to chess square (a1 is bottom-left)
+        # Describe the position
+        if len(board.piece_map()) == 0:
+            description_parts.append("The board is completely empty.")
+        else:
+            # Count total pieces
+            total_pieces = len(board.piece_map())
+            description_parts.append(f"There are {total_pieces} pieces on the board.")
+            
+            # Describe key pieces
+            white_king = None
+            black_king = None
+            for square in chess.SQUARES:
                 piece = board.piece_at(square)
-                if piece:
-                    # Use standard chess notation: K, Q, R, B, N, P for white; k, q, r, b, n, p for black
-                    piece_symbol = piece.symbol()
-                    row.append(piece_symbol)
-                else:
-                    row.append('.')  # Empty square
-            board_2d.append(row)
-        
-        logger.info(f"Recognition successful: FEN={fen}, Legal={legal}, Pieces={piece_count}")
-        
-        return JSONResponse(
-            content={
-                "fen": fen,
-                "board_2d": board_2d,  # 2D array representation of the board
-                "pieces_found": piece_count,
-                "cursor_description": cursor_description,
-                "legal_position": legal
-            }
-        )
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Recognition failed: {str(e)}")
-        logger.error(traceback.format_exc())
-        
-        # Fallback for any error
-        logger.info(f"Recognition failed with error: {str(e)}. Providing fallback response.")
-        try:
-            fallback_board = chess.Board()
-            fallback_board.clear()
+                if piece and piece.piece_type == chess.KING:
+                    if piece.color == chess.WHITE:
+                        white_king = chess.square_name(square)
+                    else:
+                        black_king = chess.square_name(square)
             
-            # Create empty 2D board mapping for fallback
-            board_2d = [['.' for _ in range(8)] for _ in range(8)]
+            if white_king:
+                description_parts.append(f"White king is on {white_king}.")
+            if black_king:
+                description_parts.append(f"Black king is on {black_king}.")
             
-            # Generate fallback cursor description
-            fallback_description = generate_cursor_style_description(fallback_board, img.shape if 'img' in locals() else None, image.filename)
+            # Describe material advantage
+            white_material = sum(1 for square in chess.SQUARES 
+                               if board.piece_at(square) and board.piece_at(square).color == chess.WHITE)
+            black_material = sum(1 for square in chess.SQUARES 
+                               if board.piece_at(square) and board.piece_at(square).color == chess.BLACK)
             
-            return JSONResponse(
-                content={
-                    "fen": fallback_board.fen(),
-                    "board_2d": board_2d,  # Empty 2D array representation
-                    "pieces_found": 0,
-                    "cursor_description": f"⚠️ Recognition failed: {str(e)}. {fallback_description}",
-                    "legal_position": fallback_board.is_valid()
-                }
-            )
-        except Exception as fallback_error:
-            logger.error(f"Fallback response also failed: {fallback_error}")
-        
-        raise HTTPException(
-            status_code=500, 
-            detail=f"Recognition failed: {str(e)}"
-        )
-
-@app.post("/recognize_with_manual_corners")
-async def recognize_with_manual_corners(
-    image: UploadFile = File(...),
-    corners: str = Form(...),  # JSON string of corner coordinates
-    color: str = "white"
-):
-    """
-    Recognize chess position using manually selected corners.
-    Optimized for fast response to prevent app hanging.
-    """
-    """
-    Recognize chess position using manually selected corners.
-    
-    Args:
-        image: Chess board image (JPEG or PNG)
-        corners: JSON string of corner coordinates [[x1,y1], [x2,y2], [x3,y3], [x4,y4]]
-        color: Color to play as ("white" or "black")
-    
-    Returns:
-        JSON with FEN notation, board visualization, and debug information
-    """
-    start_time = time.time()
-    
-    if not cfg or not recognizer:
-        raise HTTPException(status_code=503, detail="Models not loaded")
-    
-    # Validate image type
-    if image.content_type not in ["image/jpeg", "image/png", "image/jpg"]:
-        raise HTTPException(
-            status_code=400, 
-            detail="Unsupported image type. Use JPEG or PNG."
-        )
-    
-    try:
-        # Read and decode image
-        img_bytes = await image.read()
-        np_arr = np.frombuffer(img_bytes, np.uint8)
-        img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
-        
-        if img is None:
-            raise HTTPException(status_code=400, detail="Failed to decode image")
-        
-        logger.info(f"Processing image with manual corners: {image.filename}, shape: {img.shape}")
-        
-        # Parse corners from JSON string
-        try:
-            corners_data = json.loads(corners)
-            corners_array = np.array(corners_data, dtype=np.float32)
-            
-            if corners_array.shape != (4, 2):
-                raise HTTPException(
-                    status_code=400, 
-                    detail="Invalid corners format. Expected 4 points with x,y coordinates."
-                )
-            
-            # Auto-detect if corners are normalized (0-1) or pixel coordinates
-            # If the maximum coordinate is <= 1.2 and min >= -0.2, assume normalized
-            # (allow some tolerance for slightly out-of-bounds normalized coordinates)
-            img_height, img_width = img.shape[:2]
-            max_coord = np.max(corners_array)
-            min_coord = np.min(corners_array)
-            
-            logger.info(f"DEBUG: Image size: {img_width}x{img_height}, corner range: {min_coord:.3f} to {max_coord:.3f}")
-            
-            if max_coord <= 1.2 and min_coord >= -0.2:
-                logger.info(f"Detected normalized coordinates (range: {min_coord:.3f} to {max_coord:.3f}), converting to pixel coordinates")
-                original_corners = corners_array.copy()
-                corners_array[:, 0] *= img_width   # Convert x coordinates
-                corners_array[:, 1] *= img_height  # Convert y coordinates
-                logger.info(f"Converted from {original_corners} to pixel coordinates: {corners_array}")
+            if white_material > black_material:
+                description_parts.append(f"White has material advantage ({white_material} vs {black_material} pieces).")
+            elif black_material > white_material:
+                description_parts.append(f"Black has material advantage ({black_material} vs {white_material} pieces).")
             else:
-                logger.info(f"Using pixel coordinates (range: {min_coord:.1f} to {max_coord:.1f})")
-                
-        except json.JSONDecodeError:
-            raise HTTPException(
-                status_code=400, 
-                detail="Invalid JSON format for corners parameter."
-            )
+                description_parts.append("Material is equal.")
         
-        # Validate color parameter
-        if color not in ["white", "black"]:
-            color = "white"  # Default to white
+        # Check for special conditions
+        if board.is_check():
+            description_parts.append("The position is in check.")
+        if board.is_checkmate():
+            description_parts.append("This is checkmate!")
+        elif board.is_stalemate():
+            description_parts.append("This is stalemate.")
         
-        chess_color = chess.WHITE if color == "white" else chess.BLACK
+        return " ".join(description_parts)
         
-        # Sort corners to ensure proper order (top-left, top-right, bottom-right, bottom-left)
-        sorted_corners = sort_corner_points(corners_array)
-        
-        logger.info(f"Manual corners: {sorted_corners.tolist()}")
-        
-        # Perform recognition with manual corners
-        logger.info("Performing chess recognition with manual corners...")
-        
-        # Use the existing recognizer but with manual corners
-        # We'll need to modify the approach since the recognizer expects to detect corners
-        # For now, let's use the corners to warp the image and then process it
-        
-        from chesscog.occupancy_classifier.create_dataset import warp_chessboard_image
-        
-        # Warp the chessboard using manual corners
-        warped_board = warp_chessboard_image(img, sorted_corners)
-        
-        # Convert warped board to BGR for OpenCV processing
-        warped_bgr = cv2.cvtColor(warped_board, cv2.COLOR_RGB2BGR)
-        
-        # Use the recognizer to process the warped board
-        # We'll call the recognizer's internal methods directly
-        logger.info("Processing warped board for piece recognition...")
-        
-        try:
-            # Use the existing recognizer's occupancy classification with the original image
-            # This keeps the existing occupancy classifier and only improves piece classification
-            
-            logger.info("Using existing occupancy classifier with improved piece classification...")
-            
-            # Use the recognizer's occupancy classification with the original image and manual corners
-            # This is the correct approach - occupancy classifier expects original image with corners
-            occupancy = recognizer._classify_occupancy(img, chess_color, sorted_corners)
-            
-            # Convert warped board to BGR for piece classification
-            warped_bgr = cv2.cvtColor(warped_board, cv2.COLOR_RGB2BGR)
-            
-            # Create a chess board to populate
-            board = chess.Board()
-            board.clear()
-            
-            # Define the 64 squares in chess order (a1 to h8)
-            squares = []
-            for rank in range(8):
-                for file in range(8):
-                    square = chess.square(file, 7 - rank)  # Convert to chess square
-                    squares.append(square)
-            
-            # Process only occupied squares with FAST piece classification
-            piece_count = 0
-            square_size = warped_bgr.shape[0] // 8  # Assuming square warped board
-            
-            # Batch process all occupied squares for speed
-            occupied_squares = []
-            occupied_indices = []
-            
-            for i, square in enumerate(squares):
-                if occupancy[i]:
-                    rank = i // 8
-                    file = i % 8
-                    
-                    # Calculate square coordinates in the warped image
-                    y1 = rank * square_size
-                    y2 = (rank + 1) * square_size
-                    x1 = file * square_size
-                    x2 = (file + 1) * square_size
-                    
-                    # Extract square image
-                    square_img = warped_bgr[y1:y2, x1:x2]
-                    
-                    if square_img.size > 0:
-                        occupied_squares.append((square, square_img))
-                        occupied_indices.append(i)
-            
-            # Batch process all occupied squares at once
-            if occupied_squares and hasattr(recognizer, '_custom_piece_transforms'):
-                try:
-                    # Prepare batch of images
-                    batch_images = []
-                    for square, square_img in occupied_squares:
-                        square_rgb = cv2.cvtColor(square_img, cv2.COLOR_BGR2RGB)
-                        square_pil = Image.fromarray(square_rgb)
-                        transformed_square = recognizer._custom_piece_transforms(square_pil)
-                        batch_images.append(transformed_square)
-                    
-                    if batch_images:
-                        # Stack all images into a single batch
-                        batch_tensor = torch.stack(batch_images)
-                        
-                        # Predict all pieces at once
-                        with torch.no_grad():
-                            outputs = recognizer._custom_piece_model(batch_tensor)
-                            probabilities = torch.softmax(outputs, dim=1)
-                            predicted_classes = torch.argmax(probabilities, dim=1)
-                            confidences = torch.max(probabilities, dim=1)[0]
-                            
-                            # Process results
-                            for i, (square, _) in enumerate(occupied_squares):
-                                predicted_class = predicted_classes[i].item()
-                                confidence = confidences[i].item()
-                                
-                                # Use a reasonable confidence threshold
-                                if confidence > 0.4:
-                                    piece_name = recognizer._custom_piece_classes[predicted_class]
-                                    piece = recognizer._piece_name_to_chess_piece(piece_name)
-                                    board.set_piece_at(square, piece)
-                                    piece_count += 1
-                                    
-                                    logger.debug(f"Square {chess.square_name(square)}: {piece_name} (confidence: {confidence:.3f})")
-                                else:
-                                    logger.debug(f"Square {chess.square_name(square)}: occupied but low confidence ({confidence:.3f})")
-                                    
-                except Exception as batch_error:
-                    logger.warning(f"Batch piece classification failed: {batch_error}")
-                    # Fallback to individual processing if batch fails
-                    for square, square_img in occupied_squares:
-                        try:
-                            square_rgb = cv2.cvtColor(square_img, cv2.COLOR_BGR2RGB)
-                            square_pil = Image.fromarray(square_rgb)
-                            transformed_square = recognizer._custom_piece_transforms(square_pil)
-                            transformed_square = transformed_square.unsqueeze(0)
-                            
-                            with torch.no_grad():
-                                output = recognizer._custom_piece_model(transformed_square)
-                                probabilities = torch.softmax(output, dim=1)
-                                predicted_class = torch.argmax(probabilities, dim=1).item()
-                                confidence = probabilities[0][predicted_class].item()
-                                
-                                if confidence > 0.4:
-                                    piece_name = recognizer._custom_piece_classes[predicted_class]
-                                    piece = recognizer._piece_name_to_chess_piece(piece_name)
-                                    board.set_piece_at(square, piece)
-                                    piece_count += 1
-                        except Exception as piece_error:
-                            logger.warning(f"Individual piece classification failed for square {chess.square_name(square)}: {piece_error}")
-            
-            logger.info(f"Improved piece recognition completed: Found {piece_count} pieces")
-            
-        except Exception as recognition_error:
-            logger.warning(f"Piece recognition failed, using fallback: {recognition_error}")
-            logger.error(traceback.format_exc())
-            # Fallback to empty board if recognition fails
-            board = chess.Board()
-            board.clear()
-            piece_count = 0
-        
-        # Generate results
-        fen = board.fen()
-        legal = board.is_valid()
-        
-        # No debug images needed - iOS app will handle board visualization from FEN
-        debug_images = {}
-        
-        # Generate 2D board representation for UI display (temporarily disabled)
-        # board_2d = fen_to_board_2d(fen)
-        
-        processing_time = time.time() - start_time
-        logger.info(f"Manual corner recognition completed: FEN={fen}, Legal={legal}, Pieces={piece_count}, Time={processing_time:.3f}s")
-        
-        return JSONResponse(
-            content={
-                "fen": fen,
-                "ascii": None,
-                "lichess_url": None,
-                "legal_position": legal,
-                "position_description": None,
-                "board_2d": None,
-                "pieces_found": piece_count,
-                "debug_images": debug_images,
-                "debug_image_paths": None,
-                "corners": sorted_corners.tolist(),
-                "processing_time": round(processing_time, 3),
-                "image_info": None,
-                "debug_info": None,
-                "error": None
-            }
-        )
-        
-    except HTTPException:
-        raise
     except Exception as e:
-        logger.error(f"Manual corner recognition failed: {str(e)}")
-        logger.error(traceback.format_exc())
-        
-        raise HTTPException(
-            status_code=500, 
-            detail=f"Manual corner recognition failed: {str(e)}"
-        )
-
-@app.post("/recognize_chess_position_simple")
-async def recognize_chess_position_simple(
-    image: UploadFile = File(...),
-    color: str = "white"
-):
-    """
-    Recognize chess position from uploaded image using vision recognition only.
-    
-    Args:
-        image: Chess board image (JPEG or PNG)
-        color: Color to play as ("white" or "black")
-    
-    Returns:
-        JSON with FEN notation and 2D board mapping only
-    """
-    if not cfg or not recognizer:
-        raise HTTPException(status_code=503, detail="Models not loaded")
-    
-    # Validate image type
-    if image.content_type not in ["image/jpeg", "image/png", "image/jpg"]:
-        raise HTTPException(
-            status_code=400, 
-            detail="Unsupported image type. Use JPEG or PNG."
-        )
-    
-    try:
-        # Read and decode image
-        img_bytes = await image.read()
-        np_arr = np.frombuffer(img_bytes, np.uint8)
-        img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
-        
-        if img is None:
-            raise HTTPException(status_code=400, detail="Failed to decode image")
-        
-        logger.info(f"Processing image: {image.filename}, shape: {img.shape}")
-        
-        # Validate color parameter
-        if color not in ["white", "black"]:
-            color = "white"  # Default to white
-        
-        chess_color = chess.WHITE if color == "white" else chess.BLACK
-        
-        # Perform vision-based recognition
-        logger.info("Performing chess recognition...")
-        board, corners, debug_images = recognizer.predict_with_debug(img, chess_color)
-        
-        # Count pieces found
-        piece_count = len(board.piece_map())
-        
-        # Generate results
-        fen = board.fen()
-        legal = board.is_valid()
-        
-        # Create 2D board mapping
-        board_2d = []
-        for rank in range(8):
-            row = []
-            for file in range(8):
-                square = chess.square(file, 7 - rank)  # Convert to chess square (a1 is bottom-left)
-                piece = board.piece_at(square)
-                if piece:
-                    # Use standard chess notation: K, Q, R, B, N, P for white; k, q, r, b, n, p for black
-                    piece_symbol = piece.symbol()
-                    row.append(piece_symbol)
-                else:
-                    row.append('.')  # Empty square
-            board_2d.append(row)
-        
-        logger.info(f"Recognition successful: FEN={fen}, Legal={legal}, Pieces={piece_count}")
-        
-        return JSONResponse(
-            content={
-                "fen": fen,
-                "board_2d": board_2d,  # 2D array representation of the board
-                "pieces_found": piece_count,
-                "legal_position": legal
-            }
-        )
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Recognition failed: {str(e)}")
-        logger.error(traceback.format_exc())
-        
-        # Fallback for any error
-        logger.info(f"Recognition failed with error: {str(e)}. Providing fallback response.")
-        try:
-            fallback_board = chess.Board()
-            fallback_board.clear()
-            
-            # Create empty 2D board mapping for fallback
-            board_2d = [['.' for _ in range(8)] for _ in range(8)]
-            
-            return JSONResponse(
-                content={
-                    "fen": fallback_board.fen(),
-                    "board_2d": board_2d,  # Empty 2D array representation
-                    "pieces_found": 0,
-                    "legal_position": fallback_board.is_valid()
-                }
-            )
-        except Exception as fallback_error:
-            logger.error(f"Fallback response also failed: {fallback_error}")
-        
-        raise HTTPException(
-            status_code=500, 
-            detail=f"Recognition failed: {str(e)}"
-        )
+        logger.error(f"Failed to generate position description: {e}")
+        return "Position description could not be generated."
 
 if __name__ == "__main__":
     import uvicorn
