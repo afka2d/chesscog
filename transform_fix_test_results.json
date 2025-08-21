@@ -1,0 +1,83 @@
+{
+  "overall_accuracy": 12.075471698113208,
+  "total_correct": 96,
+  "total_predictions": 795,
+  "processing_time": 22.281462907791138,
+  "per_class_results": {
+    "black_bishop": {
+      "correct": 0,
+      "total": 56,
+      "accuracy": 0.0
+    },
+    "black_king": {
+      "correct": 0,
+      "total": 42,
+      "accuracy": 0.0
+    },
+    "black_knight": {
+      "correct": 47,
+      "total": 62,
+      "accuracy": 75.80645161290323
+    },
+    "black_pawn": {
+      "correct": 17,
+      "total": 147,
+      "accuracy": 11.564625850340136
+    },
+    "black_queen": {
+      "correct": 0,
+      "total": 38,
+      "accuracy": 0.0
+    },
+    "black_rook": {
+      "correct": 3,
+      "total": 60,
+      "accuracy": 5.0
+    },
+    "white_bishop": {
+      "correct": 0,
+      "total": 60,
+      "accuracy": 0.0
+    },
+    "white_king": {
+      "correct": 0,
+      "total": 42,
+      "accuracy": 0.0
+    },
+    "white_knight": {
+      "correct": 29,
+      "total": 58,
+      "accuracy": 50.0
+    },
+    "white_pawn": {
+      "correct": 0,
+      "total": 132,
+      "accuracy": 0.0
+    },
+    "white_queen": {
+      "correct": 0,
+      "total": 39,
+      "accuracy": 0.0
+    },
+    "white_rook": {
+      "correct": 0,
+      "total": 59,
+      "accuracy": 0.0
+    }
+  },
+  "color_analysis": {
+    "white": {
+      "correct": 0,
+      "total": 59,
+      "accuracy": 7.435897435897436
+    },
+    "black": {
+      "correct": 3,
+      "total": 60,
+      "accuracy": 16.543209876543212
+    }
+  },
+  "transform_fix_applied": true,
+  "transform_size": "224x448",
+  "test_timestamp": 1755657162.89679
+}

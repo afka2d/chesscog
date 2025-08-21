@@ -26,6 +26,7 @@ from chesscog.occupancy_classifier.create_dataset import warp_chessboard_image, 
 from chesscog.piece_classifier import create_dataset as create_piece_dataset
 from chesscog.piece_classifier.create_dataset import crop_square as crop_piece_square
 from chesscog.core import sort_corner_points
+from two_stage_piece_classifier import TwoStagePieceClassifier
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -54,14 +55,17 @@ custom_piece_transforms = None
 
 class CustomChessRecognizer(ChessRecognizer):
     """
-    Custom chess recognizer that uses the improved ResNet_uniform model.
+    Custom chess recognizer that uses the two-stage piece classification approach.
+    This eliminates color confusion and improves piece recognition accuracy.
     """
     
     def __init__(self, cfg, *args, **kwargs):
         super().__init__(cfg, *args, **kwargs)
         self.custom_piece_model = None
         self.custom_piece_transforms = None
+        self.two_stage_classifier = None
         self._load_custom_piece_model()
+        self._load_two_stage_classifier()
     
     def _load_custom_piece_model(self):
         """Load the custom piece classification model."""
@@ -76,7 +80,7 @@ class CustomChessRecognizer(ChessRecognizer):
                 # Define transforms for the custom model
                 self.custom_piece_transforms = transforms.Compose([
                     transforms.ToPILImage(),
-                    transforms.Resize((100, 100)),  # Match the training configuration
+                    transforms.Resize((100, 200)),  # Match the ORIGINAL ResNet training configuration
                     transforms.ToTensor(),
                     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
                 ])
@@ -90,11 +94,20 @@ class CustomChessRecognizer(ChessRecognizer):
     
     def _classify_pieces(self, img, turn, corners, occupancy):
         """
-        Classify pieces using the custom model if available.
+        Classify pieces using the two-stage classifier if available, otherwise fall back to custom model.
         """
-        if self.custom_piece_model is None:
-            # Fall back to parent method
-            return super()._classify_pieces(img, turn, corners, occupancy)
+        # Priority 1: Use two-stage classifier (best accuracy)
+        if self.two_stage_classifier is not None:
+            try:
+                logger.info("Using two-stage piece classification")
+                return self.two_stage_classifier.classify_board(img, corners, occupancy)
+            except Exception as e:
+                logger.error(f"Two-stage classification failed: {e}")
+                logger.warning("Falling back to custom model")
+        
+        # Priority 2: Use custom piece model
+        if self.custom_piece_model is not None:
+            logger.info("Using custom piece classification model")
         
         try:
             logger.info("Using custom piece classification model")
@@ -162,6 +175,21 @@ class CustomChessRecognizer(ChessRecognizer):
             logger.error(f"Custom piece classification failed: {e}")
             logger.warning("Falling back to default piece classification")
             return super()._classify_pieces(img, turn, corners, occupancy)
+        
+        # Priority 3: Fall back to parent method (occupancy classifier remains untouched)
+        logger.info("Using default piece classification from parent class")
+        return super()._classify_pieces(img, turn, corners, occupancy)
+    
+    def _load_two_stage_classifier(self):
+        """Load the two-stage piece classifier."""
+        try:
+            logger.info("Loading two-stage piece classifier...")
+            self.two_stage_classifier = TwoStagePieceClassifier()
+            logger.info("Two-stage piece classifier loaded successfully")
+        except Exception as e:
+            logger.error(f"Failed to load two-stage classifier: {e}")
+            logger.warning("Two-stage classifier not available")
+            self.two_stage_classifier = None
 
 def encode_image(image, max_width=800, max_height=600):
     """Encode image to base64 string with size constraints."""

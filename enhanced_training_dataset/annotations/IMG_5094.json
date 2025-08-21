@@ -1,0 +1,23 @@
+{
+  "image": "IMG_5094.JPG",
+  "corners": [
+    [
+      655,
+      1886
+    ],
+    [
+      2596,
+      1833
+    ],
+    [
+      2874,
+      3722
+    ],
+    [
+      448,
+      3787
+    ]
+  ],
+  "fen": "r1bqkbnr/pppppppp/2n5/8/8/2N5/1PPPPPPP/R1BQKBNR w KQkq - 0 1",
+  "timestamp": "IMG_5094"
+}

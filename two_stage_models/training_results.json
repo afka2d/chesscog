@@ -1,0 +1,7 @@
+{
+  "color_classifier": 100.0,
+  "piece_type_classifier": 99.79864082557262,
+  "expected_combined_accuracy": 99.79864082557262,
+  "improvement_over_current": 86.49864082557262,
+  "training_timestamp": 1755728388.096763
+}
