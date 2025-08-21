@@ -236,7 +236,7 @@ def main():
     print("=" * 60)
     
     # Configuration
-    data_dir = "grey_background_dataset/pieces/train"  # Use training split
+    data_dir = "enhanced_training_dataset/pieces/train"  # Use ENHANCED dataset
     model_save_dir = "two_stage_models"
     
     # Create model directory
