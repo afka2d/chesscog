@@ -126,3 +126,4 @@ if __name__ == "__main__":
         print("Please make sure the image is in the correct location")
     else:
         fix_corners_for_image(image_path, annotation_path)
+

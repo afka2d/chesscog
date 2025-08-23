@@ -143,3 +143,4 @@ if __name__ == "__main__":
         print(f"❌ Annotation not found: {annotation_path}")
     else:
         re_extract_pieces_for_image(image_path, annotation_path, output_dir)
+
