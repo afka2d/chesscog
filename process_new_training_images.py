@@ -241,7 +241,7 @@ class ChessImageProcessor:
         
         print(f"💾 Annotation saved: {annotation_path}")
     
-    def process_images(self, start_from_image=303):
+    def process_images(self, start_from_image=221):
         """Main processing loop for all images."""
         image_files = self.get_image_files()
         
@@ -312,8 +312,8 @@ class ChessImageProcessor:
 def main():
     """Main function."""
     # Configuration
-    input_dir = os.path.expanduser("~/Desktop/training_images_3")
-    output_dir = "enhanced_training_dataset"
+    input_dir = os.path.expanduser("~/Desktop/training_images_4")
+    output_dir = "enhanced_training_dataset_v2"
     
     if not os.path.exists(input_dir):
         print(f"❌ Input directory not found: {input_dir}")
@@ -336,7 +336,7 @@ def main():
     
     # Create processor and start processing
     processor = ChessImageProcessor(input_dir, output_dir)
-    processor.process_images(start_from_image=303)  # Start from image 303
+    processor.process_images(start_from_image=221)  # Start from image 221
 
 if __name__ == "__main__":
     main()
