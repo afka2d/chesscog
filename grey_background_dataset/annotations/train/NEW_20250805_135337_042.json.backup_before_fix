@@ -1,0 +1,23 @@
+{
+  "image": "NEW_20250805_135337_042.JPG",
+  "corners": [
+    [
+      833,
+      1905
+    ],
+    [
+      2650,
+      1873
+    ],
+    [
+      2783,
+      3707
+    ],
+    [
+      552,
+      3629
+    ]
+  ],
+  "fen": "rnbqkbnr/pppppppp/8/8/8/3P2P1/2P1PP1P/RNBQKBNR w KQkq - 0 1",
+  "white_turn": true
+}

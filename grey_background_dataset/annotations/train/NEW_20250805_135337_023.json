@@ -2,22 +2,23 @@
   "image": "NEW_20250805_135337_023.JPG",
   "corners": [
     [
-      724,
-      1955
+      720,
+      1944
     ],
     [
-      2588,
-      1845
+      2592,
+      1843
     ],
     [
-      2789,
-      3743
+      2786,
+      3751
     ],
     [
-      479,
-      3763
+      475,
+      3765
     ]
   ],
   "fen": "rnbqkb1r/ppp1pppp/5n2/3p4/8/2NP2P1/2P1PP1P/R1BQKBNR w KQkq - 0 1",
-  "white_turn": true
+  "white_turn": true,
+  "timestamp": "corrected_corners_and_fen"
 }

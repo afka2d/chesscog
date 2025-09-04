@@ -2,22 +2,22 @@
   "image": "IMG_4755.JPG",
   "corners": [
     [
-      897,
-      2193
-    ],
-    [
-      2731,
-      2140
+      915,
+      2194
     ],
     [
       2736,
-      4084
+      2154
     ],
     [
-      451,
-      3921
+      2721,
+      4113
+    ],
+    [
+      453,
+      3927
     ]
   ],
   "fen": "rnbqkbnr/1ppppppp/8/8/8/8/1PPPPPPP/RNBQKBNR w KQkq - 0 1",
-  "white_turn": true
+  "timestamp": "corrected_debug"
 }

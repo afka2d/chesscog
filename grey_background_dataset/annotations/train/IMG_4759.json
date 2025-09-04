@@ -2,22 +2,23 @@
   "image": "IMG_4759.JPG",
   "corners": [
     [
-      811,
-      2040
+      806,
+      2037
     ],
     [
-      2678,
-      1929
+      2671,
+      1936
     ],
     [
-      2673,
-      3950
+      2664,
+      3967
     ],
     [
-      393,
+      388,
       3830
     ]
   ],
   "fen": "rnbqkb1r/1ppp1ppp/5n2/4p3/2B1P3/2N5/1PPP1PPP/R1BQK1NR w KQkq - 0 1",
-  "white_turn": true
+  "white_turn": true,
+  "timestamp": "corrected_corners_and_fen"
 }

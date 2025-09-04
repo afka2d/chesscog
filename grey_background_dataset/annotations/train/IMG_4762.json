@@ -2,22 +2,23 @@
   "image": "IMG_4762.JPG",
   "corners": [
     [
-      787,
-      2212
+      777,
+      2210
     ],
     [
-      2616,
-      2112
+      2606,
+      2131
     ],
     [
-      2683,
-      4104
+      2678,
+      4089
     ],
     [
-      475,
-      4017
+      489,
+      4003
     ]
   ],
-  "fen": "rnbqk2r/1ppp1ppp/5n2/2b1p3/2BPP3/2N5/1PP2PPP/R1BQK1NR w KQkq - 0 1",
-  "white_turn": true
+  "fen": "rnbqk2r/1ppp1ppp/5n2/2b1p3/2BPP3/2N2N2/1PP2PPP/R1BQK2R w KQkq - 0 1",
+  "white_turn": true,
+  "timestamp": "corrected_corners_and_fen"
 }

@@ -1,0 +1,23 @@
+{
+  "image": "IMG_4762.JPG",
+  "corners": [
+    [
+      802,
+      2184
+    ],
+    [
+      2604,
+      2110
+    ],
+    [
+      2697,
+      4108
+    ],
+    [
+      473,
+      4020
+    ]
+  ],
+  "fen": "rnbqk2r/1ppp1ppp/5n2/2b1p3/2BPP3/2N2N2/1PP2PPP/R1BQK2R w KQkq - 0 1",
+  "timestamp": "corrected_debug"
+}

@@ -1,0 +1,23 @@
+{
+  "image": "IMG_4759.JPG",
+  "corners": [
+    [
+      811,
+      2040
+    ],
+    [
+      2678,
+      1929
+    ],
+    [
+      2673,
+      3950
+    ],
+    [
+      393,
+      3830
+    ]
+  ],
+  "fen": "rnbqkb1r/1ppp1ppp/5n2/4p3/2B1P3/2N5/1PPP1PPP/R1BQK1NR w KQkq - 0 1",
+  "white_turn": true
+}

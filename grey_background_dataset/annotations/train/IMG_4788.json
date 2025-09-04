@@ -2,22 +2,23 @@
   "image": "IMG_4788.JPG",
   "corners": [
     [
-      873,
-      2203
+      864,
+      2196
     ],
     [
-      2601,
-      2116
+      2599,
+      2131
     ],
     [
-      2678,
-      3888
+      2671,
+      3866
     ],
     [
-      451,
-      3792
+      460,
+      3780
     ]
   ],
   "fen": "2b5/2p1k1p1/5p1p/1pN1n1Bn/4RPP1/2P2B1P/rP4K1/8 w - - 0 1",
-  "white_turn": true
+  "white_turn": true,
+  "timestamp": "corrected_corners_and_fen"
 }

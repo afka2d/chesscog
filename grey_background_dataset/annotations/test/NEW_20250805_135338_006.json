@@ -2,22 +2,23 @@
   "image": "NEW_20250805_135338_006.JPG",
   "corners": [
     [
-      553,
-      1837
+      554,
+      1836
     ],
     [
-      2734,
-      1812
+      2750,
+      1828
     ],
     [
-      2837,
-      4157
+      2836,
+      4154
     ],
     [
       338,
-      4065
+      4060
     ]
   ],
-  "fen": "r5k1/2p2pp1/5N2/pp2bPpr/Q1BnNRbP/1K1PqnP1/2P2PB1/R6R w - - 0 1",
-  "white_turn": true
+  "fen": "3r1r2/3b2pk/1p1b2q1/p2N1p1p/Q1P1n1pP/1P1P1n2/1B4N1/1K1R1R1B w - - 0 1",
+  "white_turn": true,
+  "timestamp": "corrected_corners_and_fen"
 }

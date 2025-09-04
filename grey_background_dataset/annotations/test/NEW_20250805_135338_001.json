@@ -3,21 +3,22 @@
   "corners": [
     [
       532,
-      1564
+      1569
     ],
     [
-      2741,
-      1477
+      2728,
+      1476
     ],
     [
       2880,
-      3757
+      3751
     ],
     [
-      431,
-      3775
+      432,
+      3772
     ]
   ],
-  "fen": "3rr1k1/1pp2pp1/5q2/p2NbPpQ/2BnN1bP/1K1PRnP1/2P2PB1/4R3 w - - 0 1",
-  "white_turn": true
+  "fen": "3r1r2/6p1/1pk2nq1/p2b1pN1/1bP1n1p1/1P1P1B2/1B1R1QN1/1K5R w - - 0 1",
+  "white_turn": true,
+  "timestamp": "corrected_corners_and_fen"
 }

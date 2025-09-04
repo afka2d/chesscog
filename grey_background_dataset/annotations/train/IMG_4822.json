@@ -2,22 +2,23 @@
   "image": "IMG_4822.JPG",
   "corners": [
     [
-      782,
-      1910
+      784,
+      1893
     ],
     [
-      2750,
-      1824
+      2736,
+      1821
     ],
     [
-      2808,
-      3926
+      2793,
+      3909
     ],
     [
-      484,
-      3816
+      496,
+      3808
     ]
   ],
   "fen": "2kr3r/1ppp1ppp/2n2n2/3qpbN1/1bBPP3/2B2N2/1PP2PPP/R2Q1RK1 w - - 0 1",
-  "white_turn": true
+  "white_turn": true,
+  "timestamp": "corrected_corners_and_fen"
 }
