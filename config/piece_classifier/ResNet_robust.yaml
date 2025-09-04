@@ -1,0 +1,28 @@
+# Robust ResNet configuration optimized for real-world performance
+# Prevents overfitting with regularization and validation monitoring
+_BASE_: config://piece_classifier/_base.yaml
+
+TRAINING:
+  MODEL:
+    REGISTRY: PIECE_CLASSIFIER
+    NAME: ResNet
+  PHASES:
+    - EPOCHS: 10  # Reduced epochs to prevent overfitting
+      OPTIMIZER:
+        LEARNING_RATE: 0.0005  # Lower learning rate for stability
+        NAME: Adam
+        WEIGHT_DECAY: 0.01  # L2 regularization
+      PARAMS: all
+      LOSS:
+        NAME: CrossEntropyLoss
+        # Balanced weights for better generalization
+        CLASS_WEIGHTS: [1.0, 1.2, 1.0, 0.8, 1.2, 1.0, 1.0, 1.2, 1.0, 0.8, 1.2, 1.0]
+
+DATASET:
+  TRANSFORMS:
+    RANDOM_HORIZONTAL_FLIP: 0.5  # 50% chance of horizontal flip
+    COLOR_JITTER:
+      BRIGHTNESS: 0.3
+      CONTRAST: 0.3
+      SATURATION: 0.3
+      HUE: 0.1

@@ -1,0 +1,28 @@
+# Lightweight ResNet configuration for fast training and good generalization
+# Uses smaller model with strong regularization
+_BASE_: config://piece_classifier/_base.yaml
+
+TRAINING:
+  MODEL:
+    REGISTRY: PIECE_CLASSIFIER
+    NAME: ResNet
+  PHASES:
+    - EPOCHS: 8  # Even fewer epochs
+      OPTIMIZER:
+        LEARNING_RATE: 0.001
+        NAME: Adam
+        WEIGHT_DECAY: 0.05  # Strong L2 regularization
+      PARAMS: all
+      LOSS:
+        NAME: CrossEntropyLoss
+        # Uniform weights to prevent bias
+        CLASS_WEIGHTS: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+
+DATASET:
+  TRANSFORMS:
+    RANDOM_HORIZONTAL_FLIP: 0.5
+    COLOR_JITTER:
+      BRIGHTNESS: 0.4
+      CONTRAST: 0.4
+      SATURATION: 0.4
+      HUE: 0.2
