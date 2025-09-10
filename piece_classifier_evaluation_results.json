@@ -1,0 +1,860 @@
+{
+  "ResNet_lightweight": {
+    "overall_accuracy": 0.07414104882459313,
+    "total_correct": 41,
+    "total_predictions": 553,
+    "evaluation_time": 10.287800073623657,
+    "piece_accuracy": {
+      "white_pawn": {
+        "correct": 0,
+        "total": 112,
+        "accuracy": 0.0
+      },
+      "white_rook": {
+        "correct": 0,
+        "total": 38,
+        "accuracy": 0.0
+      },
+      "white_knight": {
+        "correct": 0,
+        "total": 38,
+        "accuracy": 0.0
+      },
+      "white_bishop": {
+        "correct": 37,
+        "total": 41,
+        "accuracy": 0.9024390243902439
+      },
+      "white_queen": {
+        "correct": 0,
+        "total": 19,
+        "accuracy": 0.0
+      },
+      "white_king": {
+        "correct": 0,
+        "total": 21,
+        "accuracy": 0.0
+      },
+      "black_pawn": {
+        "correct": 0,
+        "total": 126,
+        "accuracy": 0.0
+      },
+      "black_rook": {
+        "correct": 0,
+        "total": 40,
+        "accuracy": 0.0
+      },
+      "black_knight": {
+        "correct": 4,
+        "total": 42,
+        "accuracy": 0.09523809523809523
+      },
+      "black_bishop": {
+        "correct": 0,
+        "total": 36,
+        "accuracy": 0.0
+      },
+      "black_queen": {
+        "correct": 0,
+        "total": 18,
+        "accuracy": 0.0
+      },
+      "black_king": {
+        "correct": 0,
+        "total": 22,
+        "accuracy": 0.0
+      }
+    },
+    "piece_predictions": {
+      "white_bishop": 255,
+      "black_knight": 91,
+      "black_king": 19,
+      "white_king": 185,
+      "white_knight": 3
+    },
+    "confusion_matrix": {
+      "white_pawn": {
+        "white_bishop": 98,
+        "black_knight": 12,
+        "black_king": 2
+      },
+      "white_rook": {
+        "white_bishop": 37,
+        "black_knight": 1
+      },
+      "white_knight": {
+        "white_bishop": 35,
+        "black_knight": 3
+      },
+      "white_bishop": {
+        "white_bishop": 37,
+        "black_knight": 3,
+        "white_king": 1
+      },
+      "white_queen": {
+        "white_bishop": 19
+      },
+      "white_king": {
+        "white_bishop": 21
+      },
+      "black_pawn": {
+        "white_knight": 2,
+        "black_knight": 47,
+        "white_king": 58,
+        "black_king": 11,
+        "white_bishop": 8
+      },
+      "black_rook": {
+        "white_king": 38,
+        "black_king": 1,
+        "black_knight": 1
+      },
+      "black_knight": {
+        "white_king": 37,
+        "black_knight": 4,
+        "black_king": 1
+      },
+      "black_bishop": {
+        "white_king": 23,
+        "black_knight": 11,
+        "white_knight": 1,
+        "black_king": 1
+      },
+      "black_queen": {
+        "white_king": 9,
+        "black_king": 3,
+        "black_knight": 6
+      },
+      "black_king": {
+        "white_king": 19,
+        "black_knight": 3
+      }
+    }
+  },
+  "ResNet_uniform": {
+    "overall_accuracy": 0.14828209764918626,
+    "total_correct": 82,
+    "total_predictions": 553,
+    "evaluation_time": 10.654131889343262,
+    "piece_accuracy": {
+      "white_pawn": {
+        "correct": 0,
+        "total": 112,
+        "accuracy": 0.0
+      },
+      "white_rook": {
+        "correct": 0,
+        "total": 38,
+        "accuracy": 0.0
+      },
+      "white_knight": {
+        "correct": 0,
+        "total": 38,
+        "accuracy": 0.0
+      },
+      "white_bishop": {
+        "correct": 40,
+        "total": 41,
+        "accuracy": 0.975609756097561
+      },
+      "white_queen": {
+        "correct": 0,
+        "total": 19,
+        "accuracy": 0.0
+      },
+      "white_king": {
+        "correct": 0,
+        "total": 21,
+        "accuracy": 0.0
+      },
+      "black_pawn": {
+        "correct": 0,
+        "total": 126,
+        "accuracy": 0.0
+      },
+      "black_rook": {
+        "correct": 0,
+        "total": 40,
+        "accuracy": 0.0
+      },
+      "black_knight": {
+        "correct": 42,
+        "total": 42,
+        "accuracy": 1.0
+      },
+      "black_bishop": {
+        "correct": 0,
+        "total": 36,
+        "accuracy": 0.0
+      },
+      "black_queen": {
+        "correct": 0,
+        "total": 18,
+        "accuracy": 0.0
+      },
+      "black_king": {
+        "correct": 0,
+        "total": 22,
+        "accuracy": 0.0
+      }
+    },
+    "piece_predictions": {
+      "white_bishop": 283,
+      "black_knight": 256,
+      "white_knight": 8,
+      "white_king": 6
+    },
+    "confusion_matrix": {
+      "white_pawn": {
+        "white_bishop": 109,
+        "black_knight": 1,
+        "white_knight": 2
+      },
+      "white_rook": {
+        "white_bishop": 37,
+        "black_knight": 1
+      },
+      "white_knight": {
+        "white_bishop": 37,
+        "black_knight": 1
+      },
+      "white_bishop": {
+        "white_bishop": 40,
+        "black_knight": 1
+      },
+      "white_queen": {
+        "white_bishop": 19
+      },
+      "white_king": {
+        "white_bishop": 21
+      },
+      "black_pawn": {
+        "white_king": 4,
+        "black_knight": 102,
+        "white_bishop": 17,
+        "white_knight": 3
+      },
+      "black_rook": {
+        "black_knight": 39,
+        "white_bishop": 1
+      },
+      "black_knight": {
+        "black_knight": 42
+      },
+      "black_bishop": {
+        "black_knight": 33,
+        "white_king": 2,
+        "white_knight": 1
+      },
+      "black_queen": {
+        "black_knight": 16,
+        "white_knight": 1,
+        "white_bishop": 1
+      },
+      "black_king": {
+        "black_knight": 20,
+        "white_knight": 1,
+        "white_bishop": 1
+      }
+    }
+  },
+  "ResNet_robust_full": {
+    "overall_accuracy": 0.07233273056057866,
+    "total_correct": 40,
+    "total_predictions": 553,
+    "evaluation_time": 10.317719221115112,
+    "piece_accuracy": {
+      "white_pawn": {
+        "correct": 0,
+        "total": 112,
+        "accuracy": 0.0
+      },
+      "white_rook": {
+        "correct": 0,
+        "total": 38,
+        "accuracy": 0.0
+      },
+      "white_knight": {
+        "correct": 0,
+        "total": 38,
+        "accuracy": 0.0
+      },
+      "white_bishop": {
+        "correct": 40,
+        "total": 41,
+        "accuracy": 0.975609756097561
+      },
+      "white_queen": {
+        "correct": 0,
+        "total": 19,
+        "accuracy": 0.0
+      },
+      "white_king": {
+        "correct": 0,
+        "total": 21,
+        "accuracy": 0.0
+      },
+      "black_pawn": {
+        "correct": 0,
+        "total": 126,
+        "accuracy": 0.0
+      },
+      "black_rook": {
+        "correct": 0,
+        "total": 40,
+        "accuracy": 0.0
+      },
+      "black_knight": {
+        "correct": 0,
+        "total": 42,
+        "accuracy": 0.0
+      },
+      "black_bishop": {
+        "correct": 0,
+        "total": 36,
+        "accuracy": 0.0
+      },
+      "black_queen": {
+        "correct": 0,
+        "total": 18,
+        "accuracy": 0.0
+      },
+      "black_king": {
+        "correct": 0,
+        "total": 22,
+        "accuracy": 0.0
+      }
+    },
+    "piece_predictions": {
+      "white_bishop": 275,
+      "white_knight": 4,
+      "white_king": 274
+    },
+    "confusion_matrix": {
+      "white_pawn": {
+        "white_bishop": 109,
+        "white_knight": 3
+      },
+      "white_rook": {
+        "white_bishop": 38
+      },
+      "white_knight": {
+        "white_bishop": 37,
+        "white_king": 1
+      },
+      "white_bishop": {
+        "white_bishop": 40,
+        "white_king": 1
+      },
+      "white_queen": {
+        "white_bishop": 19
+      },
+      "white_king": {
+        "white_bishop": 21
+      },
+      "black_pawn": {
+        "white_king": 114,
+        "white_bishop": 11,
+        "white_knight": 1
+      },
+      "black_rook": {
+        "white_king": 40
+      },
+      "black_knight": {
+        "white_king": 42
+      },
+      "black_bishop": {
+        "white_king": 36
+      },
+      "black_queen": {
+        "white_king": 18
+      },
+      "black_king": {
+        "white_king": 22
+      }
+    }
+  },
+  "ResNet_simple": {
+    "overall_accuracy": 0.19168173598553345,
+    "total_correct": 106,
+    "total_predictions": 553,
+    "evaluation_time": 10.246804237365723,
+    "piece_accuracy": {
+      "white_pawn": {
+        "correct": 106,
+        "total": 112,
+        "accuracy": 0.9464285714285714
+      },
+      "white_rook": {
+        "correct": 0,
+        "total": 38,
+        "accuracy": 0.0
+      },
+      "white_knight": {
+        "correct": 0,
+        "total": 38,
+        "accuracy": 0.0
+      },
+      "white_bishop": {
+        "correct": 0,
+        "total": 41,
+        "accuracy": 0.0
+      },
+      "white_queen": {
+        "correct": 0,
+        "total": 19,
+        "accuracy": 0.0
+      },
+      "white_king": {
+        "correct": 0,
+        "total": 21,
+        "accuracy": 0.0
+      },
+      "black_pawn": {
+        "correct": 0,
+        "total": 126,
+        "accuracy": 0.0
+      },
+      "black_rook": {
+        "correct": 0,
+        "total": 40,
+        "accuracy": 0.0
+      },
+      "black_knight": {
+        "correct": 0,
+        "total": 42,
+        "accuracy": 0.0
+      },
+      "black_bishop": {
+        "correct": 0,
+        "total": 36,
+        "accuracy": 0.0
+      },
+      "black_queen": {
+        "correct": 0,
+        "total": 18,
+        "accuracy": 0.0
+      },
+      "black_king": {
+        "correct": 0,
+        "total": 22,
+        "accuracy": 0.0
+      }
+    },
+    "piece_predictions": {
+      "white_pawn": 477,
+      "white_king": 76
+    },
+    "confusion_matrix": {
+      "white_pawn": {
+        "white_pawn": 106,
+        "white_king": 6
+      },
+      "white_rook": {
+        "white_pawn": 38
+      },
+      "white_knight": {
+        "white_pawn": 38
+      },
+      "white_bishop": {
+        "white_pawn": 41
+      },
+      "white_queen": {
+        "white_pawn": 19
+      },
+      "white_king": {
+        "white_pawn": 21
+      },
+      "black_pawn": {
+        "white_pawn": 108,
+        "white_king": 18
+      },
+      "black_rook": {
+        "white_pawn": 32,
+        "white_king": 8
+      },
+      "black_knight": {
+        "white_king": 23,
+        "white_pawn": 19
+      },
+      "black_bishop": {
+        "white_king": 9,
+        "white_pawn": 27
+      },
+      "black_queen": {
+        "white_pawn": 15,
+        "white_king": 3
+      },
+      "black_king": {
+        "white_pawn": 13,
+        "white_king": 9
+      }
+    }
+  },
+  "ResNet_simple_balanced": {
+    "overall_accuracy": 0.03074141048824593,
+    "total_correct": 17,
+    "total_predictions": 553,
+    "evaluation_time": 10.217182874679565,
+    "piece_accuracy": {
+      "white_pawn": {
+        "correct": 0,
+        "total": 112,
+        "accuracy": 0.0
+      },
+      "white_rook": {
+        "correct": 0,
+        "total": 38,
+        "accuracy": 0.0
+      },
+      "white_knight": {
+        "correct": 17,
+        "total": 38,
+        "accuracy": 0.4473684210526316
+      },
+      "white_bishop": {
+        "correct": 0,
+        "total": 41,
+        "accuracy": 0.0
+      },
+      "white_queen": {
+        "correct": 0,
+        "total": 19,
+        "accuracy": 0.0
+      },
+      "white_king": {
+        "correct": 0,
+        "total": 21,
+        "accuracy": 0.0
+      },
+      "black_pawn": {
+        "correct": 0,
+        "total": 126,
+        "accuracy": 0.0
+      },
+      "black_rook": {
+        "correct": 0,
+        "total": 40,
+        "accuracy": 0.0
+      },
+      "black_knight": {
+        "correct": 0,
+        "total": 42,
+        "accuracy": 0.0
+      },
+      "black_bishop": {
+        "correct": 0,
+        "total": 36,
+        "accuracy": 0.0
+      },
+      "black_queen": {
+        "correct": 0,
+        "total": 18,
+        "accuracy": 0.0
+      },
+      "black_king": {
+        "correct": 0,
+        "total": 22,
+        "accuracy": 0.0
+      }
+    },
+    "piece_predictions": {
+      "black_bishop": 185,
+      "white_knight": 169,
+      "white_king": 199
+    },
+    "confusion_matrix": {
+      "white_pawn": {
+        "black_bishop": 70,
+        "white_knight": 41,
+        "white_king": 1
+      },
+      "white_rook": {
+        "black_bishop": 27,
+        "white_knight": 11
+      },
+      "white_knight": {
+        "black_bishop": 21,
+        "white_knight": 17
+      },
+      "white_bishop": {
+        "black_bishop": 31,
+        "white_knight": 9,
+        "white_king": 1
+      },
+      "white_queen": {
+        "black_bishop": 15,
+        "white_knight": 4
+      },
+      "white_king": {
+        "black_bishop": 17,
+        "white_knight": 4
+      },
+      "black_pawn": {
+        "white_knight": 53,
+        "white_king": 69,
+        "black_bishop": 4
+      },
+      "black_rook": {
+        "white_king": 32,
+        "white_knight": 8
+      },
+      "black_knight": {
+        "white_king": 38,
+        "white_knight": 4
+      },
+      "black_bishop": {
+        "white_king": 26,
+        "white_knight": 10
+      },
+      "black_queen": {
+        "white_king": 11,
+        "white_knight": 7
+      },
+      "black_king": {
+        "white_king": 21,
+        "white_knight": 1
+      }
+    }
+  },
+  "ResNet_simple_robust": {
+    "overall_accuracy": 0.0650994575045208,
+    "total_correct": 36,
+    "total_predictions": 553,
+    "evaluation_time": 10.350287199020386,
+    "piece_accuracy": {
+      "white_pawn": {
+        "correct": 0,
+        "total": 112,
+        "accuracy": 0.0
+      },
+      "white_rook": {
+        "correct": 0,
+        "total": 38,
+        "accuracy": 0.0
+      },
+      "white_knight": {
+        "correct": 36,
+        "total": 38,
+        "accuracy": 0.9473684210526315
+      },
+      "white_bishop": {
+        "correct": 0,
+        "total": 41,
+        "accuracy": 0.0
+      },
+      "white_queen": {
+        "correct": 0,
+        "total": 19,
+        "accuracy": 0.0
+      },
+      "white_king": {
+        "correct": 0,
+        "total": 21,
+        "accuracy": 0.0
+      },
+      "black_pawn": {
+        "correct": 0,
+        "total": 126,
+        "accuracy": 0.0
+      },
+      "black_rook": {
+        "correct": 0,
+        "total": 40,
+        "accuracy": 0.0
+      },
+      "black_knight": {
+        "correct": 0,
+        "total": 42,
+        "accuracy": 0.0
+      },
+      "black_bishop": {
+        "correct": 0,
+        "total": 36,
+        "accuracy": 0.0
+      },
+      "black_queen": {
+        "correct": 0,
+        "total": 18,
+        "accuracy": 0.0
+      },
+      "black_king": {
+        "correct": 0,
+        "total": 22,
+        "accuracy": 0.0
+      }
+    },
+    "piece_predictions": {
+      "white_knight": 504,
+      "black_knight": 47,
+      "black_bishop": 1,
+      "black_queen": 1
+    },
+    "confusion_matrix": {
+      "white_pawn": {
+        "white_knight": 96,
+        "black_knight": 16
+      },
+      "white_rook": {
+        "white_knight": 33,
+        "black_knight": 5
+      },
+      "white_knight": {
+        "white_knight": 36,
+        "black_knight": 2
+      },
+      "white_bishop": {
+        "black_knight": 10,
+        "white_knight": 30,
+        "black_bishop": 1
+      },
+      "white_queen": {
+        "white_knight": 15,
+        "black_queen": 1,
+        "black_knight": 3
+      },
+      "white_king": {
+        "white_knight": 13,
+        "black_knight": 8
+      },
+      "black_pawn": {
+        "white_knight": 123,
+        "black_knight": 3
+      },
+      "black_rook": {
+        "white_knight": 40
+      },
+      "black_knight": {
+        "white_knight": 42
+      },
+      "black_bishop": {
+        "white_knight": 36
+      },
+      "black_queen": {
+        "white_knight": 18
+      },
+      "black_king": {
+        "white_knight": 22
+      }
+    }
+  },
+  "InceptionV3": {
+    "overall_accuracy": 0.0759493670886076,
+    "total_correct": 42,
+    "total_predictions": 553,
+    "evaluation_time": 19.59794807434082,
+    "piece_accuracy": {
+      "white_pawn": {
+        "correct": 0,
+        "total": 112,
+        "accuracy": 0.0
+      },
+      "white_rook": {
+        "correct": 0,
+        "total": 38,
+        "accuracy": 0.0
+      },
+      "white_knight": {
+        "correct": 0,
+        "total": 38,
+        "accuracy": 0.0
+      },
+      "white_bishop": {
+        "correct": 0,
+        "total": 41,
+        "accuracy": 0.0
+      },
+      "white_queen": {
+        "correct": 0,
+        "total": 19,
+        "accuracy": 0.0
+      },
+      "white_king": {
+        "correct": 0,
+        "total": 21,
+        "accuracy": 0.0
+      },
+      "black_pawn": {
+        "correct": 0,
+        "total": 126,
+        "accuracy": 0.0
+      },
+      "black_rook": {
+        "correct": 0,
+        "total": 40,
+        "accuracy": 0.0
+      },
+      "black_knight": {
+        "correct": 42,
+        "total": 42,
+        "accuracy": 1.0
+      },
+      "black_bishop": {
+        "correct": 0,
+        "total": 36,
+        "accuracy": 0.0
+      },
+      "black_queen": {
+        "correct": 0,
+        "total": 18,
+        "accuracy": 0.0
+      },
+      "black_king": {
+        "correct": 0,
+        "total": 22,
+        "accuracy": 0.0
+      }
+    },
+    "piece_predictions": {
+      "black_king": 116,
+      "black_knight": 437
+    },
+    "confusion_matrix": {
+      "white_pawn": {
+        "black_king": 36,
+        "black_knight": 76
+      },
+      "white_rook": {
+        "black_knight": 17,
+        "black_king": 21
+      },
+      "white_knight": {
+        "black_knight": 28,
+        "black_king": 10
+      },
+      "white_bishop": {
+        "black_knight": 20,
+        "black_king": 21
+      },
+      "white_queen": {
+        "black_king": 12,
+        "black_knight": 7
+      },
+      "white_king": {
+        "black_king": 11,
+        "black_knight": 10
+      },
+      "black_pawn": {
+        "black_knight": 122,
+        "black_king": 4
+      },
+      "black_rook": {
+        "black_knight": 39,
+        "black_king": 1
+      },
+      "black_knight": {
+        "black_knight": 42
+      },
+      "black_bishop": {
+        "black_knight": 36
+      },
+      "black_queen": {
+        "black_knight": 18
+      },
+      "black_king": {
+        "black_knight": 22
+      }
+    }
+  }
+}

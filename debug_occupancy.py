@@ -1,88 +1,135 @@
 #!/usr/bin/env python3
 """
-Debug occupancy classifier
+Debug the occupancy detection and piece classification integration.
 """
 
-import cv2
 import numpy as np
-import torch
+import chess
+from PIL import Image
+from simple_piece_classifier import SimplePieceClassifier
+from chesscog.recognition.recognition import ChessRecognizer
 from pathlib import Path
-from torchvision import transforms
 
-def test_occupancy_classifier():
-    """Test the occupancy classifier directly."""
+def debug_occupancy_integration():
+    """Debug the occupancy detection and piece classification."""
+    print("🔍 Debugging Occupancy Integration")
+    print("=" * 50)
     
-    # Load the occupancy model
-    model_path = Path("runs/occupancy_classifier/ResNet/ResNet.pt")
-    model = torch.load(str(model_path), map_location='cpu', weights_only=False)
-    model.eval()
+    # Load test image
+    img = Image.open('grey_background_dataset/images/test/IMG_4763.JPG').convert('RGB')
+    img_array = np.array(img)
     
-    print("✅ Occupancy model loaded successfully")
+    # Test corners
+    corners_array = np.array([[724, 2064], [2692, 1886], [2784, 4104], [441, 3979]], dtype=np.float32)
     
-    # Define transforms
-    transform = transforms.Compose([
-        transforms.ToPILImage(),
-        transforms.Resize((224, 224)),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    ])
+    # Initialize recognizers
+    piece_classifier = SimplePieceClassifier(Path("models"))
+    occupancy_recognizer = ChessRecognizer(Path("models"))
     
-    # Load and test with a sample image
-    img_path = "grey_background_dataset/images/test/IMG_4752.JPG"
-    img = cv2.imread(img_path)
-    
-    if img is None:
-        print(f"❌ Could not load image: {img_path}")
-        return
-    
-    print(f"✅ Loaded image: {img.shape}")
-    
-    # Create a simple test - take a small patch from the image
-    # This should be a square that likely contains a piece
-    h, w = img.shape[:2]
-    center_x, center_y = w // 2, h // 2
-    patch_size = 100
-    
-    # Extract a patch from the center (likely to contain a piece)
-    patch = img[center_y-patch_size//2:center_y+patch_size//2, 
-                center_x-patch_size//2:center_x+patch_size//2]
-    
-    print(f"✅ Extracted patch: {patch.shape}")
-    
-    # Save the patch for inspection
-    cv2.imwrite("debug_patch.png", patch)
-    print("✅ Saved debug_patch.png")
-    
-    # Test the model
-    with torch.no_grad():
-        # Transform the patch
-        input_tensor = transform(patch).unsqueeze(0)
-        print(f"✅ Input tensor shape: {input_tensor.shape}")
+    print("1. Testing occupancy detection...")
+    try:
+        board, detected_corners = occupancy_recognizer.predict(img_array, chess.WHITE)
         
-        # Get prediction
-        output = model(input_tensor)
-        probs = torch.softmax(output, dim=1)
-        prediction = torch.argmax(probs, dim=1).item()
-        confidence = probs[0][prediction].item()
+        # Extract occupancy from the board
+        occupancy = []
+        for square in chess.SQUARES:
+            occupancy.append(board.piece_at(square) is not None)
         
-        print(f"✅ Prediction: {prediction} (0=empty, 1=occupied)")
-        print(f"✅ Confidence: {confidence:.4f}")
-        print(f"✅ Probabilities: empty={probs[0][0].item():.4f}, occupied={probs[0][1].item():.4f}")
-    
-    # Test with a completely white patch (should be empty)
-    white_patch = np.ones((patch_size, patch_size, 3), dtype=np.uint8) * 255
-    cv2.imwrite("debug_white_patch.png", white_patch)
-    
-    with torch.no_grad():
-        input_tensor = transform(white_patch).unsqueeze(0)
-        output = model(input_tensor)
-        probs = torch.softmax(output, dim=1)
-        prediction = torch.argmax(probs, dim=1).item()
-        confidence = probs[0][prediction].item()
+        occupied_count = sum(occupancy)
+        print(f"   Occupancy detected: {occupied_count} occupied squares")
+        print(f"   Occupancy type: {type(occupancy)}")
+        print(f"   First 10 occupancy values: {occupancy[:10]}")
         
-        print(f"✅ White patch prediction: {prediction} (0=empty, 1=occupied)")
-        print(f"✅ White patch confidence: {confidence:.4f}")
-        print(f"✅ White patch probabilities: empty={probs[0][0].item():.4f}, occupied={probs[0][1].item():.4f}")
+    except Exception as e:
+        print(f"   Error in occupancy detection: {e}")
+        return False
+    
+    print("\n2. Testing piece classification with real occupancy...")
+    try:
+        pieces_1d = piece_classifier.classify_pieces(img_array, corners_array, occupancy, chess.WHITE)
+        
+        occupied_pieces = [p for p in pieces_1d if p is not None]
+        piece_types = set(occupied_pieces)
+        
+        print(f"   Pieces detected: {len(occupied_pieces)}")
+        print(f"   Unique piece types: {len(piece_types)}")
+        print(f"   Piece types: {list(piece_types)}")
+        
+        # Calculate diversity
+        diversity = len(piece_types) / 12.0 if len(occupied_pieces) > 0 else 0
+        print(f"   Diversity score: {diversity:.2f}")
+        
+        return True
+        
+    except Exception as e:
+        print(f"   Error in piece classification: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+def test_occupancy_formats():
+    """Test different occupancy data formats."""
+    print("\n" + "="*50)
+    print("🧪 Testing Different Occupancy Formats")
+    print("="*50)
+    
+    # Load test image
+    img = Image.open('grey_background_dataset/images/test/IMG_4763.JPG').convert('RGB')
+    img_array = np.array(img)
+    
+    # Test corners
+    corners_array = np.array([[724, 2064], [2692, 1886], [2784, 4104], [441, 3979]], dtype=np.float32)
+    
+    piece_classifier = SimplePieceClassifier(Path("models"))
+    
+    # Test different occupancy formats
+    test_formats = [
+        {
+            "name": "All True (list)",
+            "occupancy": [True] * 64
+        },
+        {
+            "name": "All True (numpy array)",
+            "occupancy": np.array([True] * 64)
+        },
+        {
+            "name": "Half True (list)",
+            "occupancy": [True] * 32 + [False] * 32
+        },
+        {
+            "name": "Half True (numpy array)",
+            "occupancy": np.array([True] * 32 + [False] * 32)
+        },
+        {
+            "name": "Few pieces (list)",
+            "occupancy": [True] * 8 + [False] * 56
+        },
+        {
+            "name": "Few pieces (numpy array)",
+            "occupancy": np.array([True] * 8 + [False] * 56)
+        }
+    ]
+    
+    for test_format in test_formats:
+        print(f"\n📊 Testing {test_format['name']}")
+        try:
+            pieces_1d = piece_classifier.classify_pieces(img_array, corners_array, test_format['occupancy'], chess.WHITE)
+            
+            occupied_pieces = [p for p in pieces_1d if p is not None]
+            piece_types = set(occupied_pieces)
+            
+            print(f"   Pieces detected: {len(occupied_pieces)}")
+            print(f"   Unique piece types: {len(piece_types)}")
+            print(f"   Piece types: {list(piece_types)}")
+            
+        except Exception as e:
+            print(f"   Error: {e}")
 
 if __name__ == "__main__":
-    test_occupancy_classifier() 
+    success1 = debug_occupancy_integration()
+    test_occupancy_formats()
+    
+    if success1:
+        print("\n🎉 Occupancy integration is working!")
+    else:
+        print("\n❌ Occupancy integration has issues!")

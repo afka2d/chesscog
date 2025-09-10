@@ -1,146 +1,138 @@
 #!/usr/bin/env python3
 """
-Debug the piece extraction process for NEW_20250805_135338_002 to find where it's going wrong.
+Debug the piece extraction process to see why pieces are being misclassified.
 """
 
-import cv2
 import numpy as np
-import os
+from PIL import Image
 import chess
+from simple_piece_classifier import SimplePieceClassifier
+from chesscog.recognition.recognition import ChessRecognizer
+from pathlib import Path
+import cv2
 
 def debug_piece_extraction():
-    """Debug the piece extraction process step by step."""
-    print("🔍 Debugging piece extraction process...")
+    """Debug the piece extraction process."""
+    print("🔍 Debugging Piece Extraction Process")
+    print("=" * 50)
     
-    # Image path
-    image_path = "grey_background_dataset/images/test/NEW_20250805_135338_002.JPG"
+    # Load test image
+    img_path = "grey_background_dataset/images/test/IMG_4763.JPG"
+    img = Image.open(img_path)
+    img_array = np.array(img)
     
-    # Current corners
-    corners = [
-        [536, 1894],   # a8 (top-left)
-        [2726, 1818],  # h8 (top-right)
-        [2866, 4130],  # h1 (bottom-right)
-        [359, 4101]    # a1 (bottom-left)
-    ]
+    # Test corners
+    corners = np.array([[724, 2064], [2692, 1886], [2784, 4104], [441, 3979]], dtype=np.float32)
     
-    # FEN
-    fen = "3r1r2/3b2pk/1p1b2q1/p1pN1p1p/Q1P1n1pP/1P1P1n2/1B4N1/1K1R1R1B w - - 0 1"
+    print(f"📸 Image loaded: {img_array.shape}")
+    print(f"📐 Corners: {corners.shape}")
     
-    # Read image
-    image = cv2.imread(image_path)
-    if image is None:
-        print(f"❌ Error: Could not read image {image_path}")
-        return
+    # Initialize classifiers
+    print("\n🔧 Initializing classifiers...")
+    piece_classifier = SimplePieceClassifier(Path("models"))
+    recognizer = ChessRecognizer(Path("models"))
     
-    print(f"📐 Original image: {image.shape[1]}x{image.shape[0]} pixels")
+    # Get real occupancy from ChessRecognizer
+    print("\n🎯 Getting real occupancy...")
+    board, detected_corners = recognizer.predict(img_array, chess.WHITE)
     
-    # Step 1: Convert corners to numpy array
-    corners_np = np.array(corners, dtype=np.float32)
-    print(f"📐 Corners: {corners}")
+    # Convert board to occupancy array
+    occupancy = np.zeros(64, dtype=bool)
+    for square in chess.SQUARES:
+        if board.piece_at(square) is not None:
+            occupancy[square] = True
     
-    # Step 2: Define target corners (perfect square)
-    target_size = 400
-    target_corners = np.array([
-        [0, 0],                    # a8 (top-left)
-        [target_size, 0],          # h8 (top-right)
-        [target_size, target_size], # h1 (bottom-right)
-        [0, target_size]           # a1 (bottom-left)
-    ], dtype=np.float32)
+    occupied_count = np.sum(occupancy)
+    print(f"   Occupied squares: {occupied_count}/64")
     
-    print(f"📐 Target size: {target_size}x{target_size}")
+    # Debug the piece extraction process
+    print(f"\n🔍 DEBUGGING PIECE EXTRACTION:")
     
-    # Step 3: Calculate perspective transform
-    matrix = cv2.getPerspectiveTransform(corners_np, target_corners)
-    print(f"✅ Perspective transform matrix calculated")
+    # Get the perspective transformation
+    from chesscog.core.board_detection import find_corners
+    from chesscog.core.board_detection import get_chessboard_corners
     
-    # Step 4: Apply perspective transform
-    warped = cv2.warpPerspective(image, matrix, (target_size, target_size))
-    print(f"✅ Image warped to {warped.shape[1]}x{warped.shape[0]}")
-    
-    # Save warped image
-    warped_path = "debug_outputs/NEW_20250805_135338_002_warped_debug.png"
-    cv2.imwrite(warped_path, warped)
-    print(f"💾 Warped image saved to: {warped_path}")
-    
-    # Step 5: Parse FEN
-    board = chess.Board(fen)
-    print(f"✅ FEN parsed: {fen}")
-    
-    # Step 6: Extract a specific piece for debugging (d8 - Black Rook)
-    square_size = target_size // 8
-    print(f"📐 Square size: {square_size}x{square_size} pixels")
-    
-    # Extract d8 (file 3, rank 0)
-    file, rank = 3, 0  # d8
-    x1 = file * square_size
-    y1 = rank * square_size
-    x2 = x1 + square_size
-    y2 = y1 + square_size
-    
-    print(f"🔍 Extracting d8: file={file}, rank={rank}")
-    print(f"   Square boundaries: ({x1},{y1}) to ({x2},{y2})")
-    
-    # Extract the square
-    square_img = warped[y1:y2, x1:x2]
-    print(f"✅ Square extracted: {square_img.shape[1]}x{square_img.shape[0]}")
-    
-    # Save the extracted square
-    square_path = "debug_outputs/NEW_20250805_135338_002_d8_square_debug.png"
-    cv2.imwrite(square_path, square_img)
-    print(f"💾 Square image saved to: {square_path}")
-    
-    # Step 7: Show the warped board with grid lines
-    warped_with_grid = warped.copy()
-    
-    # Draw grid lines
-    for i in range(1, 8):
-        # Vertical lines
-        x = i * square_size
-        cv2.line(warped_with_grid, (x, 0), (x, target_size), (0, 255, 0), 2)
+    try:
+        # Find corners using the same method as the classifier
+        corners_detected = get_chessboard_corners(img_array)
+        print(f"   Detected corners: {corners_detected.shape if corners_detected is not None else 'None'}")
         
-        # Horizontal lines
-        y = i * square_size
-        cv2.line(warped_with_grid, (0, y), (target_size, y), (0, 255, 0), 2)
-    
-    # Highlight d8 square
-    cv2.rectangle(warped_with_grid, (x1, y1), (x2, y2), (0, 0, 255), 3)
-    cv2.putText(warped_with_grid, "d8", (x1+5, y1+25), 
-               cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
-    
-    # Save grid image
-    grid_path = "debug_outputs/NEW_20250805_135338_002_grid_debug.png"
-    cv2.imwrite(grid_path, warped_with_grid)
-    print(f"💾 Grid image saved to: {grid_path}")
-    
-    # Step 8: Display images for verification
-    print(f"\n🔍 Displaying debug images...")
-    print(f"   Press any key to advance through each image...")
-    
-    # Show warped board
-    cv2.imshow('Warped Board (Debug)', warped)
-    cv2.waitKey(0)
-    
-    # Show warped board with grid
-    cv2.imshow('Warped Board with Grid (Debug)', warped_with_grid)
-    cv2.waitKey(0)
-    
-    # Show extracted square
-    cv2.imshow('Extracted d8 Square (Debug)', square_img)
-    cv2.waitKey(0)
-    
-    cv2.destroyAllWindows()
-    
-    print(f"\n✅ Debug complete!")
-    print(f"📁 Debug files saved:")
-    print(f"   - Warped board: {warped_path}")
-    print(f"   - Grid overlay: {grid_path}")
-    print(f"   - d8 square: {square_path}")
-    
-    print(f"\n🔍 Analysis:")
-    print(f"   - Does the warped board look like a proper chess board?")
-    print(f"   - Are the grid lines evenly spaced?")
-    print(f"   - Does the d8 square contain a black rook?")
-    print(f"   - Is the square properly centered on the piece?")
+        if corners_detected is not None:
+            # Use detected corners
+            corners_to_use = corners_detected
+        else:
+            # Use provided corners
+            corners_to_use = corners
+            print(f"   Using provided corners: {corners_to_use}")
+        
+        # Extract pieces from occupied squares
+        piece_imgs = []
+        occupied_squares = []
+        
+        for i, is_occupied in enumerate(occupancy):
+            if is_occupied:
+                rank, file = i // 8, i % 8
+                occupied_squares.append((rank, file))
+                
+                # Extract piece image using the same method as SimplePieceClassifier
+                try:
+                    # This is a simplified version - the actual extraction is more complex
+                    piece_img = img  # This is where the issue might be
+                    piece_imgs.append(piece_img)
+                    print(f"   Square {i} (rank {rank}, file {file}): Extracted piece image {piece_img.size}")
+                except Exception as e:
+                    print(f"   Square {i}: Error extracting piece - {e}")
+        
+        print(f"\n📊 EXTRACTION SUMMARY:")
+        print(f"   Occupied squares: {len(occupied_squares)}")
+        print(f"   Piece images extracted: {len(piece_imgs)}")
+        print(f"   Occupied squares: {occupied_squares}")
+        
+        # Test classification on extracted pieces
+        if piece_imgs:
+            print(f"\n🎲 TESTING CLASSIFICATION ON EXTRACTED PIECES:")
+            try:
+                # Apply transforms
+                piece_imgs_transformed = [piece_classifier._pieces_transforms(img) for img in piece_imgs]
+                piece_imgs_tensor = torch.stack(piece_imgs_transformed)
+                
+                # Get predictions
+                with torch.no_grad():
+                    predictions = piece_classifier._pieces_model(piece_imgs_tensor)
+                    predicted_classes = predictions.argmax(axis=-1).cpu().numpy()
+                    piece_names = piece_classifier._piece_classes[predicted_classes]
+                
+                # Analyze results
+                piece_names_str = []
+                for i, piece in enumerate(piece_names):
+                    if hasattr(piece, 'symbol'):
+                        piece_name = f"{'white' if piece.color else 'black'}_{piece.symbol().lower()}"
+                        piece_names_str.append(piece_name)
+                        square = occupied_squares[i]
+                        print(f"   Square {square}: {piece_name}")
+                    else:
+                        piece_names_str.append(str(piece))
+                
+                # Check for bias
+                from collections import Counter
+                piece_counts = Counter(piece_names_str)
+                print(f"\n📈 CLASSIFICATION RESULTS:")
+                print(f"   Piece counts: {dict(piece_counts)}")
+                
+                pawn_count = sum(1 for name in piece_names_str if 'p' in name.lower())
+                pawn_ratio = pawn_count / len(piece_names_str) if piece_names_str else 0
+                print(f"   Pawn ratio: {pawn_count}/{len(piece_names_str)} ({pawn_ratio*100:.1f}%)")
+                
+            except Exception as e:
+                print(f"   Error in classification: {e}")
+                import traceback
+                traceback.print_exc()
+        
+    except Exception as e:
+        print(f"   Error in piece extraction: {e}")
+        import traceback
+        traceback.print_exc()
 
 if __name__ == "__main__":
+    import torch
     debug_piece_extraction()

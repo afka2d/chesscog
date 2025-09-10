@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Main.py that keeps the working occupancy detection and only improves piece classification.
+Test main.py that uses the test piece classifier to verify API changes are reflected.
 """
 
 import os
@@ -16,7 +16,7 @@ import io
 import base64
 import cv2
 import json
-from simple_piece_classifier import SimplePieceClassifier
+from simple_piece_classifier_test import SimplePieceClassifierTest
 from chesscog.recognition.recognition import ChessRecognizer
 
 # Configure logging
@@ -28,34 +28,36 @@ piece_classifier = None
 occupancy_recognizer = None
 
 # FastAPI app
-app = FastAPI(title="Chess Position Scanner API", version="1.0.0")
+app = FastAPI(title="Chess Position Scanner API - TEST MODE", version="1.0.0")
 
 @app.on_event("startup")
 async def startup_event():
     """Initialize the chess recognizer on startup."""
     global piece_classifier, occupancy_recognizer
     
-    logger.info("Starting up Chess Position Scanner API...")
+    logger.info("🧪 Starting up Chess Position Scanner API - TEST MODE")
+    logger.info("🧪 TEST MODE: All pieces will be classified as KINGS for verification")
     
-    # Initialize piece classifier
-    logger.info("Initializing piece classifier...")
-    piece_classifier = SimplePieceClassifier(Path("models"))
-    logger.info("Piece classifier initialized successfully")
+    # Initialize test piece classifier
+    logger.info("Initializing TEST piece classifier...")
+    piece_classifier = SimplePieceClassifierTest(Path("models"))
+    logger.info("TEST piece classifier initialized successfully")
     
     # Initialize occupancy recognizer (keep your working one)
     logger.info("Initializing occupancy recognizer...")
     occupancy_recognizer = ChessRecognizer(Path("models"))
     logger.info("Occupancy recognizer initialized successfully")
     
-    logger.info("Startup completed successfully")
+    logger.info("🧪 TEST MODE: Startup completed successfully")
 
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
     return {
-        "status": "healthy", 
+        "status": "healthy - TEST MODE", 
         "piece_classifier_loaded": piece_classifier is not None,
-        "occupancy_recognizer_loaded": occupancy_recognizer is not None
+        "occupancy_recognizer_loaded": occupancy_recognizer is not None,
+        "test_mode": "All pieces will be classified as KINGS"
     }
 
 def get_occupancy_with_fallback(img_array, corners, turn):
@@ -158,8 +160,8 @@ async def recognize_chess_position_with_corners(
         occupied_count = sum(occupancy)
         logger.info(f"Detected {occupied_count} occupied squares out of 64")
         
-        # Classify pieces on occupied squares
-        logger.info("Classifying pieces with custom classifier...")
+        # Classify pieces on occupied squares - TEST MODE
+        logger.info("🧪 TEST MODE: Classifying pieces as KINGS...")
         pieces_1d = piece_classifier.classify_pieces(img_array, corners_array, occupancy, turn)
         
         # Convert 1D result to 2D for consistency
@@ -200,11 +202,16 @@ async def recognize_chess_position_with_corners(
                 piece = pieces_2d[rank, file]
                 occupancy_response.append(piece is not None)
         
+        # Count kings for verification
+        king_count = sum(1 for p in pieces if p and 'king' in p)
+        logger.info(f"🧪 TEST MODE: Generated {king_count} KINGS in response")
+        
         return {
             "fen": fen,
             "pieces": pieces,
             "occupancy": occupancy_response,
-            "success": True
+            "success": True,
+            "test_mode": "All pieces classified as KINGS for verification"
         }
         
     except Exception as e:

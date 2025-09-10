@@ -1,0 +1,26 @@
+# Production Recognition Configuration
+# Optimized for main port 8000 with improved piece classifier
+
+# Model paths
+MODELS:
+  CORNER_DETECTION: "config://corner_detection.yaml"
+  OCCUPANCY_CLASSIFIER: "models://occupancy_classifier"  # UNCHANGED - working well
+  PIECE_CLASSIFIER: "models://piece_classifier"          # UPDATED - new lightweight model
+
+# API settings
+API:
+  HOST: "0.0.0.0"
+  PORT: 8000  # Main production port
+  DEBUG: false
+  TIMEOUT: 30  # 30 second timeout for requests
+
+# Performance optimizations
+PERFORMANCE:
+  MODEL_CACHE: true
+  BATCH_SIZE: 1
+  MAX_CONCURRENT: 10
+
+# Logging
+LOGGING:
+  LEVEL: "INFO"
+  FORMAT: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"

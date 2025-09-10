@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Simple, fast training of a robust piece classifier with strong anti-overfitting measures.
-This version is designed to train quickly while maintaining good real-world performance.
+Quick training of a robust two-stage piece classifier with strong anti-overfitting measures.
+This version is optimized for speed while maintaining high real-world accuracy.
 """
 
 import logging
@@ -18,18 +18,18 @@ from PIL import Image
 from collections import defaultdict, Counter
 import time
 from sklearn.metrics import classification_report
-import random
+import matplotlib.pyplot as plt
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-class SimpleChessPieceDataset(Dataset):
-    def __init__(self, data_dir, transform=None, stage="color", max_samples=1000):
+class QuickChessPieceDataset(Dataset):
+    def __init__(self, data_dir, transform=None, stage="color", max_samples_per_class=200):
         self.data_dir = Path(data_dir)
         self.transform = transform
         self.stage = stage
-        self.max_samples = max_samples
+        self.max_samples_per_class = max_samples_per_class
         self.samples = []
         self.labels = []
         
@@ -42,18 +42,16 @@ class SimpleChessPieceDataset(Dataset):
             'black_pawn', 'black_rook', 'black_knight', 'black_bishop', 'black_queen', 'black_king'
         ]
         
-        # Limit samples per class to prevent overfitting
-        samples_per_class = self.max_samples // len(piece_classes)
-        
         for piece_class in piece_classes:
             piece_dir = self.data_dir / piece_class
             if piece_dir.exists():
                 # Get all images for this class
                 all_images = list(piece_dir.glob("*.png"))
                 
-                # Sample up to samples_per_class
-                if len(all_images) > samples_per_class:
-                    all_images = random.sample(all_images, samples_per_class)
+                # Sample up to max_samples_per_class to balance the dataset
+                if len(all_images) > self.max_samples_per_class:
+                    import random
+                    all_images = random.sample(all_images, self.max_samples_per_class)
                 
                 for img_path in all_images:
                     try:
@@ -88,7 +86,7 @@ class SimpleChessPieceDataset(Dataset):
         # Load and preprocess image
         img = cv2.imread(img_path)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        img = cv2.resize(img, (128, 128))  # Smaller size for faster training
+        img = cv2.resize(img, (224, 224))
         img = Image.fromarray(img)
         
         if self.transform:
@@ -96,41 +94,41 @@ class SimpleChessPieceDataset(Dataset):
         
         return img, label
 
-class SimpleRobustClassifier:
+class QuickRobustClassifier:
     def __init__(self, data_dir):
         self.data_dir = Path(data_dir)
         
-        # Simple transforms to prevent overfitting
+        # Lightweight transforms for speed
         self.train_transform = transforms.Compose([
-            transforms.Resize((128, 128)),
+            transforms.Resize((224, 224)),
             transforms.RandomHorizontalFlip(p=0.5),
-            transforms.ColorJitter(brightness=0.2, contrast=0.2),
+            transforms.ColorJitter(brightness=0.1, contrast=0.1),
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ])
         
         self.val_transform = transforms.Compose([
-            transforms.Resize((128, 128)),
+            transforms.Resize((224, 224)),
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ])
     
-    def create_simple_model(self, num_classes):
-        """Create a simple, efficient model"""
+    def create_lightweight_model(self, num_classes):
+        """Create a lightweight but effective model"""
         model = models.mobilenet_v2(pretrained=True)
         model.classifier = nn.Sequential(
-            nn.Dropout(0.5),  # High dropout to prevent overfitting
+            nn.Dropout(0.2),
             nn.Linear(model.last_channel, num_classes)
         )
         return model
     
-    def train_stage_simple(self, stage, epochs=5, batch_size=32, learning_rate=0.001):
-        """Simple, fast training with strong anti-overfitting"""
-        logger.info(f"Simple training {stage} classifier...")
+    def train_stage_quick(self, stage, epochs=8, batch_size=64, learning_rate=0.001):
+        """Quick training with strong anti-overfitting"""
+        logger.info(f"Quick training {stage} classifier...")
         
-        # Create datasets with limited samples
-        train_dataset = SimpleChessPieceDataset(self.data_dir, self.train_transform, stage, max_samples=800)
-        val_dataset = SimpleChessPieceDataset(self.data_dir, self.val_transform, stage, max_samples=200)
+        # Create balanced datasets
+        train_dataset = QuickChessPieceDataset(self.data_dir, self.train_transform, stage, max_samples_per_class=150)
+        val_dataset = QuickChessPieceDataset(self.data_dir, self.val_transform, stage, max_samples_per_class=50)
         
         # Split data
         train_size = int(0.8 * len(train_dataset))
@@ -143,9 +141,9 @@ class SimpleRobustClassifier:
         train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=2)
         val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=2)
         
-        # Create simple model
+        # Create lightweight model
         num_classes = 2 if stage == "color" else 6
-        model = self.create_simple_model(num_classes)
+        model = self.create_lightweight_model(num_classes)
         
         # Move to device
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -153,12 +151,13 @@ class SimpleRobustClassifier:
         
         # Strong anti-overfitting setup
         criterion = nn.CrossEntropyLoss()
-        optimizer = optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=0.1)  # Very high weight decay
+        optimizer = optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=0.01)  # Strong weight decay
         scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)
         
         # Training with early stopping
         best_val_acc = 0
-        patience = 2  # Very early stopping
+        patience = 3
+        patience_counter = 0
         
         for epoch in range(epochs):
             # Training
@@ -172,8 +171,8 @@ class SimpleRobustClassifier:
                 loss = criterion(output, target)
                 loss.backward()
                 
-                # Gradient clipping
-                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=0.5)
+                # Gradient clipping to prevent exploding gradients
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
                 
                 optimizer.step()
                 train_loss += loss.item()
@@ -198,19 +197,19 @@ class SimpleRobustClassifier:
             # Early stopping
             if val_acc > best_val_acc:
                 best_val_acc = val_acc
-                patience = 0
-                torch.save(model.state_dict(), f"models/{stage}_classifier_simple.pt")
+                patience_counter = 0
+                torch.save(model.state_dict(), f"models/{stage}_classifier_quick.pt")
                 logger.info(f"New best validation accuracy: {val_acc:.4f}")
             else:
-                patience += 1
-                if patience >= 2:
+                patience_counter += 1
+                if patience_counter >= patience:
                     logger.info(f"Early stopping at epoch {epoch+1}")
                     break
             
             scheduler.step()
         
         # Load best model
-        model.load_state_dict(torch.load(f"models/{stage}_classifier_simple.pt"))
+        model.load_state_dict(torch.load(f"models/{stage}_classifier_quick.pt"))
         
         # Final evaluation
         model.eval()
@@ -232,30 +231,30 @@ class SimpleRobustClassifier:
         
         return model, best_val_acc
     
-    def train_both_stages_simple(self):
-        """Simple training of both stages"""
-        logger.info("Starting simple two-stage classifier training...")
+    def train_both_stages_quick(self):
+        """Quick training of both stages"""
+        logger.info("Starting quick two-stage classifier training...")
         
         # Create models directory
         Path("models").mkdir(exist_ok=True)
         
         # Train color classifier (should be very fast and accurate)
         logger.info("="*50)
-        logger.info("TRAINING COLOR CLASSIFIER (Simple)")
+        logger.info("TRAINING COLOR CLASSIFIER (Quick)")
         logger.info("="*50)
-        color_model, color_acc = self.train_stage_simple("color", epochs=3, batch_size=32)
+        color_model, color_acc = self.train_stage_quick("color", epochs=6, batch_size=64)
         
         # Train piece type classifier
         logger.info("="*50)
-        logger.info("TRAINING PIECE TYPE CLASSIFIER (Simple)")
+        logger.info("TRAINING PIECE TYPE CLASSIFIER (Quick)")
         logger.info("="*50)
-        piece_model, piece_acc = self.train_stage_simple("piece_type", epochs=4, batch_size=32)
+        piece_model, piece_acc = self.train_stage_quick("piece_type", epochs=8, batch_size=64)
         
         # Calculate combined accuracy
         combined_acc = color_acc * piece_acc
         
         logger.info("="*50)
-        logger.info("SIMPLE TRAINING COMPLETE")
+        logger.info("QUICK TRAINING COMPLETE")
         logger.info("="*50)
         logger.info(f"Color Classifier Accuracy: {color_acc:.3f}")
         logger.info(f"Piece Type Classifier Accuracy: {piece_acc:.3f}")
@@ -270,19 +269,22 @@ def main():
         logger.error(f"Dataset not found at {data_dir}")
         return
     
-    # Create and train simple robust classifier
-    classifier = SimpleRobustClassifier(data_dir)
-    color_model, piece_model, combined_acc = classifier.train_both_stages_simple()
+    # Create and train quick robust classifier
+    classifier = QuickRobustClassifier(data_dir)
+    color_model, piece_model, combined_acc = classifier.train_both_stages_quick()
     
-    logger.info(f"\n🎯 SIMPLE TRAINING RESULTS:")
+    logger.info(f"\n🎯 QUICK TRAINING RESULTS:")
     logger.info(f"Combined Accuracy: {combined_acc:.1%}")
     logger.info(f"Expected Real-World Performance: {combined_acc:.1%}")
     
-    if combined_acc >= 0.6:
-        logger.info("✅ SUCCESS: Achieved reasonable accuracy")
-        logger.info("Models saved to models/color_classifier_simple.pt and models/piece_type_classifier_simple.pt")
+    if combined_acc >= 0.7:
+        logger.info("✅ SUCCESS: Achieved target accuracy of 70%+")
+        logger.info("Models saved to models/color_classifier_quick.pt and models/piece_type_classifier_quick.pt")
     else:
-        logger.info("⚠️  WARNING: Low accuracy. Consider using ChessCog's pre-trained models instead.")
+        logger.info("⚠️  WARNING: Did not achieve target accuracy. Consider:")
+        logger.info("   - Increasing max_samples_per_class")
+        logger.info("   - More training epochs")
+        logger.info("   - Different model architecture")
 
 if __name__ == "__main__":
     main()

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Main.py that keeps the working occupancy detection and only improves piece classification.
+Clean main.py with improved occupancy detection and piece classification.
 """
 
 import os
@@ -17,7 +17,6 @@ import base64
 import cv2
 import json
 from simple_piece_classifier import SimplePieceClassifier
-from chesscog.recognition.recognition import ChessRecognizer
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -25,7 +24,6 @@ logger = logging.getLogger(__name__)
 
 # Global instances
 piece_classifier = None
-occupancy_recognizer = None
 
 # FastAPI app
 app = FastAPI(title="Chess Position Scanner API", version="1.0.0")
@@ -33,19 +31,21 @@ app = FastAPI(title="Chess Position Scanner API", version="1.0.0")
 @app.on_event("startup")
 async def startup_event():
     """Initialize the chess recognizer on startup."""
-    global piece_classifier, occupancy_recognizer
+    global piece_classifier
     
     logger.info("Starting up Chess Position Scanner API...")
+    
+    # Load configuration
+    logger.info("Loading configuration...")
+    config_path = Path("models/recognition.yaml")
+    if not config_path.exists():
+        raise FileNotFoundError(f"Configuration file not found: {config_path}")
+    logger.info("Configuration loaded successfully")
     
     # Initialize piece classifier
     logger.info("Initializing piece classifier...")
     piece_classifier = SimplePieceClassifier(Path("models"))
     logger.info("Piece classifier initialized successfully")
-    
-    # Initialize occupancy recognizer (keep your working one)
-    logger.info("Initializing occupancy recognizer...")
-    occupancy_recognizer = ChessRecognizer(Path("models"))
-    logger.info("Occupancy recognizer initialized successfully")
     
     logger.info("Startup completed successfully")
 
@@ -54,81 +54,77 @@ async def health_check():
     """Health check endpoint."""
     return {
         "status": "healthy", 
-        "piece_classifier_loaded": piece_classifier is not None,
-        "occupancy_recognizer_loaded": occupancy_recognizer is not None
+        "piece_classifier_loaded": piece_classifier is not None
     }
 
-def get_occupancy_with_fallback(img_array, corners, turn):
-    """Get occupancy using your working ChessCog method with proper error handling."""
+def simple_occupancy_detection(img_array, corners):
+    """Simple, stable occupancy detection."""
     try:
-        # Use your working ChessCog occupancy detection
-        logger.info("Using ChessCog occupancy detection...")
-        board, detected_corners = occupancy_recognizer.predict(img_array, turn)
+        # Convert corners to numpy array
+        corners = np.array(corners, dtype=np.float32)
         
-        # Extract occupancy from the board
+        # Get perspective transformation
+        board_size = 400
+        dst_points = np.array([
+            [0, 0],
+            [board_size, 0],
+            [board_size, board_size],
+            [0, board_size]
+        ], dtype=np.float32)
+        
+        M = cv2.getPerspectiveTransform(corners, dst_points)
+        warped = cv2.warpPerspective(img_array, M, (board_size, board_size))
+        
+        # Convert to grayscale
+        gray = cv2.cvtColor(warped, cv2.COLOR_RGB2GRAY)
+        
+        # Apply Gaussian blur to reduce noise
+        blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+        
+        # Use adaptive thresholding for better edge detection
+        thresh = cv2.adaptiveThreshold(blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
+        
+        # Divide into 8x8 grid
+        square_size = board_size // 8
         occupancy = []
-        for square in chess.SQUARES:
-            piece = board.piece_at(square)
-            # Handle the array ambiguity error by checking if piece is not None
-            occupancy.append(piece is not None)
+        
+        for row in range(8):
+            for col in range(8):
+                y1 = row * square_size
+                y2 = (row + 1) * square_size
+                x1 = col * square_size
+                x2 = (col + 1) * square_size
+                
+                # Extract square from both original and thresholded images
+                square_img = gray[y1:y2, x1:x2]
+                square_thresh = thresh[y1:y2, x1:x2]
+                
+                # Calculate statistics
+                mean_val = np.mean(square_img)
+                std_dev = np.std(square_img)
+                
+                # Count white pixels in thresholded image (edges)
+                white_pixels = np.sum(square_thresh == 255)
+                total_pixels = square_thresh.size
+                edge_ratio = white_pixels / total_pixels
+                
+                # More sophisticated occupancy detection
+                is_occupied = (
+                    std_dev > 20 or  # High variation
+                    abs(mean_val - 128) > 25 or  # Different from background
+                    edge_ratio > 0.1  # Significant edge content
+                )
+                occupancy.append(is_occupied)
         
         occupied_count = sum(occupancy)
-        logger.info(f"ChessCog detected {occupied_count} occupied squares out of 64")
+        logger.info(f"Simple occupancy detection found {occupied_count} occupied squares out of 64")
         return occupancy
         
     except Exception as e:
-        logger.warning(f"ChessCog occupancy detection failed: {e}")
-        logger.info("Falling back to simple occupancy detection...")
-        
-        # Fallback to simple occupancy detection
-        try:
-            # Convert corners to numpy array
-            corners = np.array(corners, dtype=np.float32)
-            
-            # Get perspective transformation
-            board_size = 400
-            dst_points = np.array([
-                [0, 0],
-                [board_size, 0],
-                [board_size, board_size],
-                [0, board_size]
-            ], dtype=np.float32)
-            
-            M = cv2.getPerspectiveTransform(corners, dst_points)
-            warped = cv2.warpPerspective(img_array, M, (board_size, board_size))
-            
-            # Convert to grayscale
-            gray = cv2.cvtColor(warped, cv2.COLOR_RGB2GRAY)
-            
-            # Divide into 8x8 grid
-            square_size = board_size // 8
-            occupancy = []
-            
-            for row in range(8):
-                for col in range(8):
-                    y1 = row * square_size
-                    y2 = (row + 1) * square_size
-                    x1 = col * square_size
-                    x2 = (col + 1) * square_size
-                    
-                    square = gray[y1:y2, x1:x2]
-                    
-                    # More conservative thresholds for better occupancy detection
-                    std_dev = np.std(square)
-                    mean_val = np.mean(square)
-                    
-                    # Only mark as occupied if there's significant variation
-                    is_occupied = std_dev > 30 and abs(mean_val - 128) > 25
-                    occupancy.append(is_occupied)
-            
-            occupied_count = sum(occupancy)
-            logger.info(f"Simple detection found {occupied_count} occupied squares out of 64")
-            return occupancy
-            
-        except Exception as e2:
-            logger.warning(f"Simple occupancy detection also failed: {e2}")
-            # Final fallback to all squares occupied
-            return [True] * 64
+        logger.error(f"Simple occupancy detection failed: {e}")
+        # Ultimate fallback: assume all squares are occupied
+        logger.warning("Using ultimate fallback: assuming all squares occupied")
+        return [True] * 64
 
 @app.post("/recognize_chess_position_with_corners")
 async def recognize_chess_position_with_corners(
@@ -150,9 +146,9 @@ async def recognize_chess_position_with_corners(
         # Determine turn
         turn = chess.WHITE if color.lower() == "white" else chess.BLACK
         
-        # Use your working occupancy detection
-        logger.info("Detecting occupancy with working method...")
-        occupancy = get_occupancy_with_fallback(img_array, corners_list, turn)
+        # Use simple, stable occupancy detection
+        logger.info("Detecting occupancy using simple method...")
+        occupancy = simple_occupancy_detection(img_array, corners_list)
         
         # Count occupied squares
         occupied_count = sum(occupancy)

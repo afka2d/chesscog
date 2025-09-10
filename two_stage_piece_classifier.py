@@ -192,10 +192,16 @@ class TwoStagePieceClassifier:
             # Initialize pieces array
             pieces = np.full((8, 8), None, dtype=object)
             
+            # Convert 1D occupancy to 2D if needed
+            if len(occupancy.shape) == 1:
+                occupancy_2d = occupancy.reshape(8, 8)
+            else:
+                occupancy_2d = occupancy
+            
             # Process each occupied square
             for rank in range(8):
                 for file in range(8):
-                    if occupancy[rank, file]:
+                    if occupancy_2d[rank, file]:
                         # Crop the square
                         square_img = crop_square(warped, rank, file)
                         
