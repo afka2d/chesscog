@@ -1,0 +1,15 @@
+[Unit]
+Description=Chess Position Scanner API
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/chess-api
+ExecStart=/usr/bin/docker-compose up
+ExecStop=/usr/bin/docker-compose down
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

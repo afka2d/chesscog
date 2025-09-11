@@ -1,67 +1,44 @@
-FROM nvidia/cuda:10.2-cudnn7-devel-ubuntu18.04
+# Use Python 3.10 slim image as base
+FROM python:3.10-slim
 
-# Install Python 3.8
-RUN apt update && \
-    apt install -y software-properties-common && \
-    add-apt-repository ppa:deadsnakes/ppa && \
-    apt update && \
-    apt install -y python3.8 python3-pip && \
-    update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.8 1 && \
-    update-alternatives --install /usr/bin/python python /usr/bin/python3.8 1 && \
-    update-alternatives --install /usr/bin/pip pip /usr/bin/pip3 1
+# Set working directory
+WORKDIR /app
 
-# OpenGL is needed for OpenCV
-RUN apt install -y libgl1-mesa-glx
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    libgomp1 \
+    libgcc-s1 \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install zip
-RUN apt install -y zip
+# Copy requirements first for better caching
+COPY requirements.txt .
 
-# Install poetry
-RUN pip install --upgrade pip && \
-    pip install poetry && \
-    poetry config virtualenvs.create false
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Install dependencies
-RUN mkdir -p /chess
-WORKDIR /chess
-COPY ./pyproject.toml ./poetry.lock* ./
-RUN poetry install --no-root
-ENV PYTHONPATH "/chess:${PYTHONPATH}"
+# Copy the application code
+COPY . .
 
-# Setup data mount
-RUN mkdir -p /data
-ENV DATA_DIR /data
-VOLUME /data
+# Create necessary directories
+RUN mkdir -p models runs/occupancy_classifier/ResNet logs
 
-# Setup config mount
-RUN mkdir -p /config
-ENV CONFIG_DIR /config
-VOLUME /config
+# Set environment variables
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
+ENV PORT=8000
+ENV WORKERS=1
 
-# Setup run mount
-RUN mkdir -p /chess/runs
-ENV RUN_DIR /chess/runs
-VOLUME /chess/runs
+# Expose port
+EXPOSE 8000
 
-# Setup results mount
-RUN mkdir -p /chess/results
-ENV RESULTS_DIR /chess/results
-VOLUME /chess/results
+# Health check
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
 
-# Setup models mount
-RUN mkdir -p /chess/models
-ENV MODELS_DIR /chess/models
-VOLUME /chess/models
-
-# Copy files
-COPY chesscog ./chesscog
-
-# Scratch volume
-VOLUME /chess/scratch
-
-# Weird fix for poetry in the GPU container (not required for CPU)
-RUN python3 -m pip install idna
-
-# Entrypoint (password is "chesscog")
-CMD poetry run tensorboard --logdir ./runs --host 0.0.0.0 --port 9999  & \
-    poetry run jupyter lab --no-browser --allow-root --ip 0.0.0.0 --port 8888 --NotebookApp.password "sha1:22fda334b4b5:770a9d781f1e689afdcd2c55e7abae94ba74d925"
+# Run the application
+CMD ["python", "main_production.py"]
