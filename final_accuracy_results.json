@@ -1,0 +1,21 @@
+{
+  "summary": {
+    "images_evaluated": 1,
+    "occupancy_rate": 0.0,
+    "piece_detection_rate": 0.0,
+    "high_confidence_rate": 0,
+    "perfect_fen_rate": 0.0
+  },
+  "detailed_results": [
+    {
+      "image": "IMG_4698.JPG",
+      "pieces_detected": 0,
+      "occupied_squares": 0,
+      "total_squares": 64,
+      "high_confidence_pieces": 0,
+      "fen": "8/8/8/8/8/8/8/8 w - - 0 1",
+      "fen_perfect": false,
+      "success": true
+    }
+  ]
+}

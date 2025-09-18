@@ -1,0 +1,32 @@
+{
+  "timestamp": "2025-09-15 18:59:12",
+  "all_results": [
+    {
+      "method": "Working corners from logs",
+      "pieces_detected": 0,
+      "occupied_squares": 0,
+      "total_squares": 64,
+      "fen": "8/8/8/8/8/8/8/8 w - - 0 1"
+    },
+    {
+      "method": "Estimated corners",
+      "pieces_detected": 0,
+      "occupied_squares": 0,
+      "total_squares": 64,
+      "fen": "8/8/8/8/8/8/8/8 w - - 0 1"
+    }
+  ],
+  "best_result": {
+    "method": "Working corners from logs",
+    "pieces_detected": 0,
+    "occupied_squares": 0,
+    "total_squares": 64,
+    "fen": "8/8/8/8/8/8/8/8 w - - 0 1"
+  },
+  "metrics": {
+    "occupancy_accuracy": 0.0,
+    "color_accuracy": 0,
+    "piece_accuracy": 0,
+    "fen_accuracy": 0
+  }
+}

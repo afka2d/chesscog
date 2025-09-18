@@ -1,0 +1,925 @@
+[
+  {
+    "timestamp": "2025-09-17 14:48:07",
+    "action": "backup_created",
+    "details": {
+      "backup_dir": "backup_1758134873"
+    }
+  },
+  {
+    "timestamp": "2025-09-17 14:48:11",
+    "action": "baseline_captured",
+    "details": {
+      "baseline_file": "api_baseline.json"
+    }
+  },
+  {
+    "timestamp": "2025-09-17 14:48:18",
+    "action": "inventory_created",
+    "details": {
+      "inventory_file": "inventory_1758134898.json"
+    }
+  },
+  {
+    "timestamp": "2025-09-17 14:48:18",
+    "action": "batch_successful",
+    "details": {
+      "batch_number": 1,
+      "files_moved": 3,
+      "moved_files": [
+        [
+          "./best_SimpleColorClassifier.pth",
+          "quarantine_1758134898/best_SimpleColorClassifier.pth"
+        ],
+        [
+          "./best_ColorClassifier.pth",
+          "quarantine_1758134898/best_ColorClassifier.pth"
+        ],
+        [
+          "./best_SimplePieceTypeClassifier.pth",
+          "quarantine_1758134898/best_SimplePieceTypeClassifier.pth"
+        ]
+      ]
+    }
+  },
+  {
+    "timestamp": "2025-09-17 14:48:18",
+    "action": "batch_successful",
+    "details": {
+      "batch_number": 2,
+      "files_moved": 3,
+      "moved_files": [
+        [
+          "./two_stage_models/piece_type_classifier.pt",
+          "quarantine_1758134898/piece_type_classifier.pt"
+        ],
+        [
+          "./backup_1758134087/models/piece_type_classifier_quick.pt",
+          "quarantine_1758134898/piece_type_classifier_quick.pt"
+        ],
+        [
+          "./backup_1758134087/models/color_classifier_quick.pt",
+          "quarantine_1758134898/color_classifier_quick.pt"
+        ]
+      ]
+    }
+  },
+  {
+    "timestamp": "2025-09-17 14:48:18",
+    "action": "batch_successful",
+    "details": {
+      "batch_number": 3,
+      "files_moved": 3,
+      "moved_files": [
+        [
+          "./backup_1758134087/models/piece_type_classifier_best.pt",
+          "quarantine_1758134898/piece_type_classifier_best.pt"
+        ],
+        [
+          "./backup_1758134087/models/color_classifier_best.pt",
+          "quarantine_1758134898/color_classifier_best.pt"
+        ],
+        [
+          "./backup_1758134087/models/piece_classifier/InceptionV3.pt",
+          "quarantine_1758134898/InceptionV3.pt"
+        ]
+      ]
+    }
+  },
+  {
+    "timestamp": "2025-09-17 14:48:18",
+    "action": "batch_successful",
+    "details": {
+      "batch_number": 4,
+      "files_moved": 3,
+      "moved_files": [
+        [
+          "./backup_1758134087/models/piece_classifier/ResNet_lightweight.pt",
+          "quarantine_1758134898/ResNet_lightweight.pt"
+        ],
+        [
+          "./backup_1758134087/models/piece_classifier/ResNet_robust_full.pt",
+          "quarantine_1758134898/ResNet_robust_full.pt"
+        ],
+        [
+          "./backup_1758134087/models/piece_classifier/ResNet_simple_balanced.pt",
+          "quarantine_1758134898/ResNet_simple_balanced.pt"
+        ]
+      ]
+    }
+  },
+  {
+    "timestamp": "2025-09-17 14:48:18",
+    "action": "batch_successful",
+    "details": {
+      "batch_number": 5,
+      "files_moved": 3,
+      "moved_files": [
+        [
+          "./backup_1758134087/models/piece_classifier/ResNet_simple_robust.pt",
+          "quarantine_1758134898/ResNet_simple_robust.pt"
+        ],
+        [
+          "./backup_1758134087/models/piece_classifier/ResNet_simple.pt",
+          "quarantine_1758134898/ResNet_simple.pt"
+        ],
+        [
+          "./backup_1758134087/models/piece_classifier/ResNet_robust.pt",
+          "quarantine_1758134898/ResNet_robust.pt"
+        ]
+      ]
+    }
+  },
+  {
+    "timestamp": "2025-09-17 14:48:18",
+    "action": "batch_successful",
+    "details": {
+      "batch_number": 6,
+      "files_moved": 3,
+      "moved_files": [
+        [
+          "./backup_1758134087/models/pretrained/chess_piece_classifier.pt",
+          "quarantine_1758134898/chess_piece_classifier.pt"
+        ],
+        [
+          "./backup_1758134087/runs/piece_classifier/ResNet_lightweight/ResNet_lightweight.pt",
+          "quarantine_1758134898/ResNet_lightweight.pt"
+        ],
+        [
+          "./backup_1758134087/runs/piece_classifier/ResNet_uniform/ResNet_uniform_backup.pt",
+          "quarantine_1758134898/ResNet_uniform_backup.pt"
+        ]
+      ]
+    }
+  },
+  {
+    "timestamp": "2025-09-17 14:48:18",
+    "action": "batch_successful",
+    "details": {
+      "batch_number": 7,
+      "files_moved": 3,
+      "moved_files": [
+        [
+          "./backup_1758134087/runs/piece_classifier/ResNet_uniform/ResNet_uniform.pt",
+          "quarantine_1758134898/ResNet_uniform.pt"
+        ],
+        [
+          "./deployment_20250910_181959/models/piece_type_classifier_quick.pt",
+          "quarantine_1758134898/piece_type_classifier_quick.pt"
+        ],
+        [
+          "./deployment_20250910_181959/models/color_classifier_quick.pt",
+          "quarantine_1758134898/color_classifier_quick.pt"
+        ]
+      ]
+    }
+  },
+  {
+    "timestamp": "2025-09-17 14:48:18",
+    "action": "batch_successful",
+    "details": {
+      "batch_number": 8,
+      "files_moved": 3,
+      "moved_files": [
+        [
+          "./deployment_20250910_181959/models/piece_type_classifier_best.pt",
+          "quarantine_1758134898/piece_type_classifier_best.pt"
+        ],
+        [
+          "./deployment_20250910_181959/models/color_classifier_best.pt",
+          "quarantine_1758134898/color_classifier_best.pt"
+        ],
+        [
+          "./deployment_20250910_181959/models/piece_classifier/InceptionV3.pt",
+          "quarantine_1758134898/InceptionV3.pt"
+        ]
+      ]
+    }
+  },
+  {
+    "timestamp": "2025-09-17 14:48:18",
+    "action": "batch_successful",
+    "details": {
+      "batch_number": 9,
+      "files_moved": 3,
+      "moved_files": [
+        [
+          "./deployment_20250910_181959/models/piece_classifier/ResNet_lightweight.pt",
+          "quarantine_1758134898/ResNet_lightweight.pt"
+        ],
+        [
+          "./deployment_20250910_181959/models/piece_classifier/ResNet_robust_full.pt",
+          "quarantine_1758134898/ResNet_robust_full.pt"
+        ],
+        [
+          "./deployment_20250910_181959/models/piece_classifier/ResNet_simple_balanced.pt",
+          "quarantine_1758134898/ResNet_simple_balanced.pt"
+        ]
+      ]
+    }
+  },
+  {
+    "timestamp": "2025-09-17 14:48:18",
+    "action": "batch_successful",
+    "details": {
+      "batch_number": 10,
+      "files_moved": 3,
+      "moved_files": [
+        [
+          "./deployment_20250910_181959/models/piece_classifier/ResNet_simple_robust.pt",
+          "quarantine_1758134898/ResNet_simple_robust.pt"
+        ],
+        [
+          "./deployment_20250910_181959/models/piece_classifier/ResNet_simple.pt",
+          "quarantine_1758134898/ResNet_simple.pt"
+        ],
+        [
+          "./deployment_20250910_181959/models/piece_classifier/ResNet_robust.pt",
+          "quarantine_1758134898/ResNet_robust.pt"
+        ]
+      ]
+    }
+  },
+  {
+    "timestamp": "2025-09-17 14:48:18",
+    "action": "batch_successful",
+    "details": {
+      "batch_number": 11,
+      "files_moved": 3,
+      "moved_files": [
+        [
+          "./deployment_20250910_181959/models/pretrained/chess_piece_classifier.pt",
+          "quarantine_1758134898/chess_piece_classifier.pt"
+        ],
+        [
+          "./deployment_20250910_181959/runs/piece_classifier/ResNet_lightweight/ResNet_lightweight.pt",
+          "quarantine_1758134898/ResNet_lightweight.pt"
+        ],
+        [
+          "./deployment_20250910_181959/runs/piece_classifier/ResNet_uniform/ResNet_uniform_backup.pt",
+          "quarantine_1758134898/ResNet_uniform_backup.pt"
+        ]
+      ]
+    }
+  },
+  {
+    "timestamp": "2025-09-17 14:48:18",
+    "action": "batch_successful",
+    "details": {
+      "batch_number": 12,
+      "files_moved": 3,
+      "moved_files": [
+        [
+          "./deployment_20250910_181959/runs/piece_classifier/ResNet_uniform/ResNet_uniform.pt",
+          "quarantine_1758134898/ResNet_uniform.pt"
+        ],
+        [
+          "./backup_1758134058/models/piece_type_classifier_quick.pt",
+          "quarantine_1758134898/piece_type_classifier_quick.pt"
+        ],
+        [
+          "./backup_1758134058/models/color_classifier_quick.pt",
+          "quarantine_1758134898/color_classifier_quick.pt"
+        ]
+      ]
+    }
+  },
+  {
+    "timestamp": "2025-09-17 14:48:18",
+    "action": "batch_successful",
+    "details": {
+      "batch_number": 13,
+      "files_moved": 3,
+      "moved_files": [
+        [
+          "./backup_1758134058/models/piece_type_classifier_best.pt",
+          "quarantine_1758134898/piece_type_classifier_best.pt"
+        ],
+        [
+          "./backup_1758134058/models/color_classifier_best.pt",
+          "quarantine_1758134898/color_classifier_best.pt"
+        ],
+        [
+          "./backup_1758134058/models/piece_classifier/InceptionV3.pt",
+          "quarantine_1758134898/InceptionV3.pt"
+        ]
+      ]
+    }
+  },
+  {
+    "timestamp": "2025-09-17 14:48:18",
+    "action": "batch_successful",
+    "details": {
+      "batch_number": 14,
+      "files_moved": 3,
+      "moved_files": [
+        [
+          "./backup_1758134058/models/piece_classifier/ResNet_lightweight.pt",
+          "quarantine_1758134898/ResNet_lightweight.pt"
+        ],
+        [
+          "./backup_1758134058/models/piece_classifier/ResNet_robust_full.pt",
+          "quarantine_1758134898/ResNet_robust_full.pt"
+        ],
+        [
+          "./backup_1758134058/models/piece_classifier/ResNet_simple_balanced.pt",
+          "quarantine_1758134898/ResNet_simple_balanced.pt"
+        ]
+      ]
+    }
+  },
+  {
+    "timestamp": "2025-09-17 14:48:18",
+    "action": "batch_successful",
+    "details": {
+      "batch_number": 15,
+      "files_moved": 3,
+      "moved_files": [
+        [
+          "./backup_1758134058/models/piece_classifier/ResNet_simple_robust.pt",
+          "quarantine_1758134898/ResNet_simple_robust.pt"
+        ],
+        [
+          "./backup_1758134058/models/piece_classifier/ResNet_simple.pt",
+          "quarantine_1758134898/ResNet_simple.pt"
+        ],
+        [
+          "./backup_1758134058/models/piece_classifier/ResNet_robust.pt",
+          "quarantine_1758134898/ResNet_robust.pt"
+        ]
+      ]
+    }
+  },
+  {
+    "timestamp": "2025-09-17 14:48:19",
+    "action": "batch_successful",
+    "details": {
+      "batch_number": 16,
+      "files_moved": 3,
+      "moved_files": [
+        [
+          "./backup_1758134058/models/pretrained/chess_piece_classifier.pt",
+          "quarantine_1758134898/chess_piece_classifier.pt"
+        ],
+        [
+          "./backup_1758134058/runs/piece_classifier/ResNet_lightweight/ResNet_lightweight.pt",
+          "quarantine_1758134898/ResNet_lightweight.pt"
+        ],
+        [
+          "./backup_1758134058/runs/piece_classifier/ResNet_uniform/ResNet_uniform_backup.pt",
+          "quarantine_1758134898/ResNet_uniform_backup.pt"
+        ]
+      ]
+    }
+  },
+  {
+    "timestamp": "2025-09-17 14:48:19",
+    "action": "batch_successful",
+    "details": {
+      "batch_number": 17,
+      "files_moved": 3,
+      "moved_files": [
+        [
+          "./backup_1758134058/runs/piece_classifier/ResNet_uniform/ResNet_uniform.pt",
+          "quarantine_1758134898/ResNet_uniform.pt"
+        ],
+        [
+          "./models/piece_type_classifier_quick.pt",
+          "quarantine_1758134898/piece_type_classifier_quick.pt"
+        ],
+        [
+          "./models/color_classifier_quick.pt",
+          "quarantine_1758134898/color_classifier_quick.pt"
+        ]
+      ]
+    }
+  },
+  {
+    "timestamp": "2025-09-17 14:48:19",
+    "action": "batch_successful",
+    "details": {
+      "batch_number": 18,
+      "files_moved": 3,
+      "moved_files": [
+        [
+          "./models/piece_type_classifier_best.pt",
+          "quarantine_1758134898/piece_type_classifier_best.pt"
+        ],
+        [
+          "./models/color_classifier_best.pt",
+          "quarantine_1758134898/color_classifier_best.pt"
+        ],
+        [
+          "./models/piece_classifier/InceptionV3.pt",
+          "quarantine_1758134898/InceptionV3.pt"
+        ]
+      ]
+    }
+  },
+  {
+    "timestamp": "2025-09-17 14:48:19",
+    "action": "batch_successful",
+    "details": {
+      "batch_number": 19,
+      "files_moved": 3,
+      "moved_files": [
+        [
+          "./models/piece_classifier/ResNet_lightweight.pt",
+          "quarantine_1758134898/ResNet_lightweight.pt"
+        ],
+        [
+          "./models/piece_classifier/ResNet_robust_full.pt",
+          "quarantine_1758134898/ResNet_robust_full.pt"
+        ],
+        [
+          "./models/piece_classifier/ResNet_simple_balanced.pt",
+          "quarantine_1758134898/ResNet_simple_balanced.pt"
+        ]
+      ]
+    }
+  },
+  {
+    "timestamp": "2025-09-17 14:48:19",
+    "action": "batch_successful",
+    "details": {
+      "batch_number": 20,
+      "files_moved": 3,
+      "moved_files": [
+        [
+          "./models/piece_classifier/ResNet_simple_robust.pt",
+          "quarantine_1758134898/ResNet_simple_robust.pt"
+        ],
+        [
+          "./models/piece_classifier/ResNet_simple.pt",
+          "quarantine_1758134898/ResNet_simple.pt"
+        ],
+        [
+          "./models/piece_classifier/ResNet_robust.pt",
+          "quarantine_1758134898/ResNet_robust.pt"
+        ]
+      ]
+    }
+  },
+  {
+    "timestamp": "2025-09-17 14:48:19",
+    "action": "batch_successful",
+    "details": {
+      "batch_number": 21,
+      "files_moved": 3,
+      "moved_files": [
+        [
+          "./models/pretrained/chess_piece_classifier.pt",
+          "quarantine_1758134898/chess_piece_classifier.pt"
+        ],
+        [
+          "./improvement_results/backup/ResNet_uniform_backup.pt",
+          "quarantine_1758134898/ResNet_uniform_backup.pt"
+        ],
+        [
+          "./backup_1758134873/models/piece_type_classifier_quick.pt",
+          "quarantine_1758134898/piece_type_classifier_quick.pt"
+        ]
+      ]
+    }
+  },
+  {
+    "timestamp": "2025-09-17 14:48:19",
+    "action": "batch_successful",
+    "details": {
+      "batch_number": 22,
+      "files_moved": 3,
+      "moved_files": [
+        [
+          "./backup_1758134873/models/color_classifier_quick.pt",
+          "quarantine_1758134898/color_classifier_quick.pt"
+        ],
+        [
+          "./backup_1758134873/models/piece_type_classifier_best.pt",
+          "quarantine_1758134898/piece_type_classifier_best.pt"
+        ],
+        [
+          "./backup_1758134873/models/color_classifier_best.pt",
+          "quarantine_1758134898/color_classifier_best.pt"
+        ]
+      ]
+    }
+  },
+  {
+    "timestamp": "2025-09-17 14:48:20",
+    "action": "batch_successful",
+    "details": {
+      "batch_number": 23,
+      "files_moved": 3,
+      "moved_files": [
+        [
+          "./backup_1758134873/models/piece_classifier/InceptionV3.pt",
+          "quarantine_1758134898/InceptionV3.pt"
+        ],
+        [
+          "./backup_1758134873/models/piece_classifier/ResNet_lightweight.pt",
+          "quarantine_1758134898/ResNet_lightweight.pt"
+        ],
+        [
+          "./backup_1758134873/models/piece_classifier/ResNet_robust_full.pt",
+          "quarantine_1758134898/ResNet_robust_full.pt"
+        ]
+      ]
+    }
+  },
+  {
+    "timestamp": "2025-09-17 14:48:22",
+    "action": "batch_successful",
+    "details": {
+      "batch_number": 24,
+      "files_moved": 3,
+      "moved_files": [
+        [
+          "./backup_1758134873/models/piece_classifier/ResNet_simple_balanced.pt",
+          "quarantine_1758134898/ResNet_simple_balanced.pt"
+        ],
+        [
+          "./backup_1758134873/models/piece_classifier/ResNet_simple_robust.pt",
+          "quarantine_1758134898/ResNet_simple_robust.pt"
+        ],
+        [
+          "./backup_1758134873/models/piece_classifier/ResNet_simple.pt",
+          "quarantine_1758134898/ResNet_simple.pt"
+        ]
+      ]
+    }
+  },
+  {
+    "timestamp": "2025-09-17 14:48:24",
+    "action": "batch_successful",
+    "details": {
+      "batch_number": 25,
+      "files_moved": 3,
+      "moved_files": [
+        [
+          "./backup_1758134873/models/piece_classifier/ResNet_robust.pt",
+          "quarantine_1758134898/ResNet_robust.pt"
+        ],
+        [
+          "./backup_1758134873/models/pretrained/chess_piece_classifier.pt",
+          "quarantine_1758134898/chess_piece_classifier.pt"
+        ],
+        [
+          "./backup_1758134873/runs/piece_classifier/ResNet_lightweight/ResNet_lightweight.pt",
+          "quarantine_1758134898/ResNet_lightweight.pt"
+        ]
+      ]
+    }
+  },
+  {
+    "timestamp": "2025-09-17 14:48:25",
+    "action": "batch_successful",
+    "details": {
+      "batch_number": 26,
+      "files_moved": 3,
+      "moved_files": [
+        [
+          "./backup_1758134873/runs/piece_classifier/ResNet_uniform/ResNet_uniform_backup.pt",
+          "quarantine_1758134898/ResNet_uniform_backup.pt"
+        ],
+        [
+          "./backup_1758134873/runs/piece_classifier/ResNet_uniform/ResNet_uniform.pt",
+          "quarantine_1758134898/ResNet_uniform.pt"
+        ],
+        [
+          "./venv/lib/python3.10/site-packages/distutils-precedence.pth",
+          "quarantine_1758134898/distutils-precedence.pth"
+        ]
+      ]
+    }
+  },
+  {
+    "timestamp": "2025-09-17 14:48:25",
+    "action": "batch_successful",
+    "details": {
+      "batch_number": 27,
+      "files_moved": 3,
+      "moved_files": [
+        [
+          "./venv/lib/python3.10/site-packages/numpy/core/tests/data/astype_copy.pkl",
+          "quarantine_1758134898/astype_copy.pkl"
+        ],
+        [
+          "./venv/lib/python3.10/site-packages/joblib/test/data/joblib_0.10.0_pickle_py33_np18.pkl",
+          "quarantine_1758134898/joblib_0.10.0_pickle_py33_np18.pkl"
+        ],
+        [
+          "./venv/lib/python3.10/site-packages/joblib/test/data/joblib_0.9.2_pickle_py27_np16.pkl",
+          "quarantine_1758134898/joblib_0.9.2_pickle_py27_np16.pkl"
+        ]
+      ]
+    }
+  },
+  {
+    "timestamp": "2025-09-17 14:48:25",
+    "action": "batch_successful",
+    "details": {
+      "batch_number": 28,
+      "files_moved": 3,
+      "moved_files": [
+        [
+          "./venv/lib/python3.10/site-packages/joblib/test/data/joblib_0.9.2_pickle_py27_np17.pkl",
+          "quarantine_1758134898/joblib_0.9.2_pickle_py27_np17.pkl"
+        ],
+        [
+          "./venv/lib/python3.10/site-packages/joblib/test/data/joblib_0.9.2_pickle_py34_np19.pkl",
+          "quarantine_1758134898/joblib_0.9.2_pickle_py34_np19.pkl"
+        ],
+        [
+          "./venv/lib/python3.10/site-packages/joblib/test/data/joblib_0.9.2_pickle_py35_np19.pkl",
+          "quarantine_1758134898/joblib_0.9.2_pickle_py35_np19.pkl"
+        ]
+      ]
+    }
+  },
+  {
+    "timestamp": "2025-09-17 14:48:25",
+    "action": "batch_successful",
+    "details": {
+      "batch_number": 29,
+      "files_moved": 3,
+      "moved_files": [
+        [
+          "./venv/lib/python3.10/site-packages/joblib/test/data/joblib_0.11.0_pickle_py36_np111.pkl",
+          "quarantine_1758134898/joblib_0.11.0_pickle_py36_np111.pkl"
+        ],
+        [
+          "./venv/lib/python3.10/site-packages/joblib/test/data/joblib_0.9.2_pickle_py33_np18.pkl",
+          "quarantine_1758134898/joblib_0.9.2_pickle_py33_np18.pkl"
+        ],
+        [
+          "./venv/lib/python3.10/site-packages/joblib/test/data/joblib_0.10.0_pickle_py27_np17.pkl",
+          "quarantine_1758134898/joblib_0.10.0_pickle_py27_np17.pkl"
+        ]
+      ]
+    }
+  },
+  {
+    "timestamp": "2025-09-17 14:48:25",
+    "action": "batch_successful",
+    "details": {
+      "batch_number": 30,
+      "files_moved": 3,
+      "moved_files": [
+        [
+          "./venv/lib/python3.10/site-packages/joblib/test/data/joblib_0.10.0_pickle_py34_np19.pkl",
+          "quarantine_1758134898/joblib_0.10.0_pickle_py34_np19.pkl"
+        ],
+        [
+          "./venv/lib/python3.10/site-packages/joblib/test/data/joblib_0.10.0_pickle_py35_np19.pkl",
+          "quarantine_1758134898/joblib_0.10.0_pickle_py35_np19.pkl"
+        ],
+        [
+          "./deployment_fixed_response_20250910_193121/models/piece_type_classifier_quick.pt",
+          "quarantine_1758134898/piece_type_classifier_quick.pt"
+        ]
+      ]
+    }
+  },
+  {
+    "timestamp": "2025-09-17 14:48:26",
+    "action": "batch_successful",
+    "details": {
+      "batch_number": 31,
+      "files_moved": 3,
+      "moved_files": [
+        [
+          "./deployment_fixed_response_20250910_193121/models/color_classifier_quick.pt",
+          "quarantine_1758134898/color_classifier_quick.pt"
+        ],
+        [
+          "./deployment_fixed_response_20250910_193121/models/piece_type_classifier_best.pt",
+          "quarantine_1758134898/piece_type_classifier_best.pt"
+        ],
+        [
+          "./deployment_fixed_response_20250910_193121/models/color_classifier_best.pt",
+          "quarantine_1758134898/color_classifier_best.pt"
+        ]
+      ]
+    }
+  },
+  {
+    "timestamp": "2025-09-17 14:48:26",
+    "action": "batch_successful",
+    "details": {
+      "batch_number": 32,
+      "files_moved": 3,
+      "moved_files": [
+        [
+          "./deployment_fixed_response_20250910_193121/models/piece_classifier/InceptionV3.pt",
+          "quarantine_1758134898/InceptionV3.pt"
+        ],
+        [
+          "./deployment_fixed_response_20250910_193121/models/piece_classifier/ResNet_lightweight.pt",
+          "quarantine_1758134898/ResNet_lightweight.pt"
+        ],
+        [
+          "./deployment_fixed_response_20250910_193121/models/piece_classifier/ResNet_robust_full.pt",
+          "quarantine_1758134898/ResNet_robust_full.pt"
+        ]
+      ]
+    }
+  },
+  {
+    "timestamp": "2025-09-17 14:48:26",
+    "action": "batch_successful",
+    "details": {
+      "batch_number": 33,
+      "files_moved": 3,
+      "moved_files": [
+        [
+          "./deployment_fixed_response_20250910_193121/models/piece_classifier/ResNet_simple_balanced.pt",
+          "quarantine_1758134898/ResNet_simple_balanced.pt"
+        ],
+        [
+          "./deployment_fixed_response_20250910_193121/models/piece_classifier/ResNet_simple_robust.pt",
+          "quarantine_1758134898/ResNet_simple_robust.pt"
+        ],
+        [
+          "./deployment_fixed_response_20250910_193121/models/piece_classifier/ResNet_simple.pt",
+          "quarantine_1758134898/ResNet_simple.pt"
+        ]
+      ]
+    }
+  },
+  {
+    "timestamp": "2025-09-17 14:48:27",
+    "action": "batch_successful",
+    "details": {
+      "batch_number": 34,
+      "files_moved": 3,
+      "moved_files": [
+        [
+          "./deployment_fixed_response_20250910_193121/models/piece_classifier/ResNet_robust.pt",
+          "quarantine_1758134898/ResNet_robust.pt"
+        ],
+        [
+          "./deployment_fixed_response_20250910_193121/models/pretrained/chess_piece_classifier.pt",
+          "quarantine_1758134898/chess_piece_classifier.pt"
+        ],
+        [
+          "./deployment_fixed_response_20250910_193121/runs/piece_classifier/ResNet_lightweight/ResNet_lightweight.pt",
+          "quarantine_1758134898/ResNet_lightweight.pt"
+        ]
+      ]
+    }
+  },
+  {
+    "timestamp": "2025-09-17 14:48:27",
+    "action": "batch_successful",
+    "details": {
+      "batch_number": 35,
+      "files_moved": 3,
+      "moved_files": [
+        [
+          "./deployment_fixed_response_20250910_193121/runs/piece_classifier/ResNet_uniform/ResNet_uniform_backup.pt",
+          "quarantine_1758134898/ResNet_uniform_backup.pt"
+        ],
+        [
+          "./deployment_fixed_response_20250910_193121/runs/piece_classifier/ResNet_uniform/ResNet_uniform.pt",
+          "quarantine_1758134898/ResNet_uniform.pt"
+        ],
+        [
+          "./deployment_20250910_180452/models/piece_type_classifier_quick.pt",
+          "quarantine_1758134898/piece_type_classifier_quick.pt"
+        ]
+      ]
+    }
+  },
+  {
+    "timestamp": "2025-09-17 14:48:27",
+    "action": "batch_successful",
+    "details": {
+      "batch_number": 36,
+      "files_moved": 3,
+      "moved_files": [
+        [
+          "./deployment_20250910_180452/models/color_classifier_quick.pt",
+          "quarantine_1758134898/color_classifier_quick.pt"
+        ],
+        [
+          "./deployment_20250910_180452/models/piece_type_classifier_best.pt",
+          "quarantine_1758134898/piece_type_classifier_best.pt"
+        ],
+        [
+          "./deployment_20250910_180452/models/color_classifier_best.pt",
+          "quarantine_1758134898/color_classifier_best.pt"
+        ]
+      ]
+    }
+  },
+  {
+    "timestamp": "2025-09-17 14:48:27",
+    "action": "batch_successful",
+    "details": {
+      "batch_number": 37,
+      "files_moved": 3,
+      "moved_files": [
+        [
+          "./deployment_20250910_180452/models/piece_classifier/InceptionV3.pt",
+          "quarantine_1758134898/InceptionV3.pt"
+        ],
+        [
+          "./deployment_20250910_180452/models/piece_classifier/ResNet_lightweight.pt",
+          "quarantine_1758134898/ResNet_lightweight.pt"
+        ],
+        [
+          "./deployment_20250910_180452/models/piece_classifier/ResNet_robust_full.pt",
+          "quarantine_1758134898/ResNet_robust_full.pt"
+        ]
+      ]
+    }
+  },
+  {
+    "timestamp": "2025-09-17 14:48:27",
+    "action": "batch_successful",
+    "details": {
+      "batch_number": 38,
+      "files_moved": 3,
+      "moved_files": [
+        [
+          "./deployment_20250910_180452/models/piece_classifier/ResNet_simple_balanced.pt",
+          "quarantine_1758134898/ResNet_simple_balanced.pt"
+        ],
+        [
+          "./deployment_20250910_180452/models/piece_classifier/ResNet_simple_robust.pt",
+          "quarantine_1758134898/ResNet_simple_robust.pt"
+        ],
+        [
+          "./deployment_20250910_180452/models/piece_classifier/ResNet_simple.pt",
+          "quarantine_1758134898/ResNet_simple.pt"
+        ]
+      ]
+    }
+  },
+  {
+    "timestamp": "2025-09-17 14:48:27",
+    "action": "batch_successful",
+    "details": {
+      "batch_number": 39,
+      "files_moved": 3,
+      "moved_files": [
+        [
+          "./deployment_20250910_180452/models/piece_classifier/ResNet_robust.pt",
+          "quarantine_1758134898/ResNet_robust.pt"
+        ],
+        [
+          "./deployment_20250910_180452/models/pretrained/chess_piece_classifier.pt",
+          "quarantine_1758134898/chess_piece_classifier.pt"
+        ],
+        [
+          "./deployment_20250910_180452/runs/piece_classifier/ResNet_lightweight/ResNet_lightweight.pt",
+          "quarantine_1758134898/ResNet_lightweight.pt"
+        ]
+      ]
+    }
+  },
+  {
+    "timestamp": "2025-09-17 14:48:27",
+    "action": "batch_successful",
+    "details": {
+      "batch_number": 40,
+      "files_moved": 3,
+      "moved_files": [
+        [
+          "./deployment_20250910_180452/runs/piece_classifier/ResNet_uniform/ResNet_uniform_backup.pt",
+          "quarantine_1758134898/ResNet_uniform_backup.pt"
+        ],
+        [
+          "./deployment_20250910_180452/runs/piece_classifier/ResNet_uniform/ResNet_uniform.pt",
+          "quarantine_1758134898/ResNet_uniform.pt"
+        ],
+        [
+          "./.git/cursor_metadata.pb",
+          "quarantine_1758134898/cursor_metadata.pb"
+        ]
+      ]
+    }
+  },
+  {
+    "timestamp": "2025-09-17 14:48:27",
+    "action": "batch_successful",
+    "details": {
+      "batch_number": 41,
+      "files_moved": 3,
+      "moved_files": [
+        [
+          "./runs/piece_classifier/ResNet_lightweight/ResNet_lightweight.pt",
+          "quarantine_1758134898/ResNet_lightweight.pt"
+        ],
+        [
+          "./runs/piece_classifier/ResNet_uniform/ResNet_uniform_backup.pt",
+          "quarantine_1758134898/ResNet_uniform_backup.pt"
+        ],
+        [
+          "./runs/piece_classifier/ResNet_uniform/ResNet_uniform.pt",
+          "quarantine_1758134898/ResNet_uniform.pt"
+        ]
+      ]
+    }
+  }
+]

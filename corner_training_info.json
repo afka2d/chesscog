@@ -1,0 +1,136 @@
+{
+  "total_images": 215,
+  "split_counts": {
+    "train": 158,
+    "val": 34,
+    "test": 23
+  },
+  "corner_data_sample": [
+    {
+      "image_path": "grey_background_dataset/images/train/NEW_20250805_135338_076.JPG",
+      "image_name": "NEW_20250805_135338_076.JPG",
+      "corners": [
+        [
+          496,
+          1829
+        ],
+        [
+          2638,
+          1730
+        ],
+        [
+          2851,
+          3959
+        ],
+        [
+          367,
+          4015
+        ]
+      ],
+      "image_width": 3240,
+      "image_height": 5760,
+      "split": "train"
+    },
+    {
+      "image_path": "grey_background_dataset/images/train/NEW_20250805_135337_019.JPG",
+      "image_name": "NEW_20250805_135337_019.JPG",
+      "corners": [
+        [
+          642,
+          1735
+        ],
+        [
+          2715,
+          1621
+        ],
+        [
+          2792,
+          3853
+        ],
+        [
+          415,
+          3758
+        ]
+      ],
+      "image_width": 3240,
+      "image_height": 5760,
+      "split": "train"
+    },
+    {
+      "image_path": "grey_background_dataset/images/train/NEW_20250805_135337_058.JPG",
+      "image_name": "NEW_20250805_135337_058.JPG",
+      "corners": [
+        [
+          569,
+          1798
+        ],
+        [
+          2638,
+          1715
+        ],
+        [
+          2749,
+          3923
+        ],
+        [
+          361,
+          3867
+        ]
+      ],
+      "image_width": 3240,
+      "image_height": 5760,
+      "split": "train"
+    },
+    {
+      "image_path": "grey_background_dataset/images/train/IMG_4787.JPG",
+      "image_name": "IMG_4787.JPG",
+      "corners": [
+        [
+          642,
+          2110
+        ],
+        [
+          2706,
+          1909
+        ],
+        [
+          2878,
+          4251
+        ],
+        [
+          398,
+          4194
+        ]
+      ],
+      "image_width": 3240,
+      "image_height": 5760,
+      "split": "train"
+    },
+    {
+      "image_path": "grey_background_dataset/images/train/NEW_20250805_135337_023.JPG",
+      "image_name": "NEW_20250805_135337_023.JPG",
+      "corners": [
+        [
+          720,
+          1944
+        ],
+        [
+          2592,
+          1843
+        ],
+        [
+          2786,
+          3751
+        ],
+        [
+          475,
+          3765
+        ]
+      ],
+      "image_width": 3240,
+      "image_height": 5760,
+      "split": "train"
+    }
+  ],
+  "recommended_approach": "CNN-based"
+}

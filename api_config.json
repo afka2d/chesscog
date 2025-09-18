@@ -1,0 +1,6 @@
+{
+  "api_url": "https://api.chesspositionscanner.store/recognize_chess_position_with_corners",
+  "health_url": "https://api.chesspositionscanner.store/health",
+  "environment": "production",
+  "port": 443
+}

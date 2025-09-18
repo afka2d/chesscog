@@ -1,0 +1,34 @@
+{
+  "timestamp": "2025-09-17 14:48:07",
+  "backup_directory": "backup_1758134873",
+  "steps": [
+    {
+      "step": 1,
+      "action": "verify_backup",
+      "description": "Verify backup integrity",
+      "risk": "LOW",
+      "rollback": "N/A"
+    },
+    {
+      "step": 2,
+      "action": "baseline_test",
+      "description": "Capture API baseline performance",
+      "risk": "NONE",
+      "rollback": "N/A"
+    },
+    {
+      "step": 3,
+      "action": "move_unused_files",
+      "description": "Move 123 potentially unused files to quarantine",
+      "risk": "LOW",
+      "rollback": "Move files back from quarantine"
+    },
+    {
+      "step": 4,
+      "action": "test_after_changes",
+      "description": "Test API performance after each change",
+      "risk": "NONE",
+      "rollback": "Restore from backup if issues detected"
+    }
+  ]
+}

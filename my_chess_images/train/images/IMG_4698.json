@@ -1,0 +1,322 @@
+{
+  "a8": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "b8": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "c8": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "d8": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "e8": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "f8": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "g8": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "h8": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "a7": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "b7": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "c7": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "d7": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "e7": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "f7": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "g7": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "h7": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "a6": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "b6": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "c6": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "d6": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "e6": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "f6": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "g6": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "h6": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "a5": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "b5": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "c5": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "d5": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "e5": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "f5": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "g5": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "h5": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "a4": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "b4": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "c4": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "d4": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "e4": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "f4": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "g4": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "h4": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "a3": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "b3": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "c3": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "d3": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "e3": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "f3": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "g3": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "h3": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "a2": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "b2": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "c2": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "d2": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "e2": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "f2": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "g2": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "h2": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "a1": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "b1": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "c1": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "d1": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "e1": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "f1": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "g1": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  },
+  "h1": {
+    "occupied": false,
+    "color": null,
+    "piece": null
+  }
+}

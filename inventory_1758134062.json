@@ -1,0 +1,25 @@
+{
+  "timestamp": "2025-09-17 14:34:18",
+  "backup_directory": "backup_1758134058",
+  "files_backed_up": [
+    {
+      "original_path": "main_local_dev.py",
+      "backup_path": "backup_1758134058/main_local_dev.py",
+      "hash": "6fea11f9bc883e2f133bab0c8ca6b65a5eaf75605492884a15a82381995c1702",
+      "size": 16494
+    },
+    {
+      "original_path": "main.py",
+      "backup_path": "backup_1758134058/main.py",
+      "hash": "29832d1a5a9f51a4ba61d635b9515703931c44e7a3dbe324566bbeec38e86d28",
+      "size": 7900
+    }
+  ],
+  "model_files": [],
+  "api_files": [],
+  "unused_files": [],
+  "critical_files": [
+    "main_local_dev.py",
+    "main.py"
+  ]
+}

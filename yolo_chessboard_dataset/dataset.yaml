@@ -1,0 +1,7 @@
+names:
+- chessboard
+nc: 1
+path: /Users/tonyblum/code/chesscog/yolo_chessboard_dataset
+test: test/images
+train: train/images
+val: val/images

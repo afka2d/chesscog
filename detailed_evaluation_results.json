@@ -1,0 +1,20 @@
+[
+  {
+    "image": "sample.jpeg",
+    "pieces_detected": 10,
+    "occupied_squares": 20,
+    "processing_time": 3.038017988204956,
+    "fen": "8/1p1p1pb1/1p2p3/4P3/8/1RR3R1/8/8 w - - 0 1",
+    "success": true,
+    "confidence_analysis": null
+  },
+  {
+    "image": "IMG_4698.JPG",
+    "pieces_detected": 0,
+    "occupied_squares": 0,
+    "processing_time": 0.40382814407348633,
+    "fen": "8/8/8/8/8/8/8/8 w - - 0 1",
+    "success": true,
+    "confidence_analysis": null
+  }
+]
