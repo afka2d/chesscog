@@ -1,0 +1,116 @@
+{
+  "test_timestamp": 1758323043.1265159,
+  "test_summary": {
+    "target_accuracy": "<15px average error",
+    "target_time": "<2 seconds",
+    "apis_tested": [
+      "yolo_only",
+      "fast_precision",
+      "ultra_precision"
+    ],
+    "images_tested": [
+      "IMG_4698.JPG"
+    ]
+  },
+  "api_performance": {
+    "yolo_only": {
+      "avg_time": 0.3128929138183594,
+      "success_rate": 100.0,
+      "total_tests": 1
+    },
+    "fast_precision": {
+      "avg_time": 0.3242180347442627,
+      "success_rate": 100.0,
+      "total_tests": 1
+    },
+    "ultra_precision": {
+      "avg_time": 0.502,
+      "success_rate": 100.0,
+      "total_tests": 1
+    }
+  },
+  "detailed_results": {
+    "IMG_4698.JPG": {
+      "yolo_only": {
+        "success": true,
+        "corners": [
+          [
+            702.0,
+            1917.0
+          ],
+          [
+            2709.0,
+            1782.0
+          ],
+          [
+            2772.0,
+            3996.0
+          ],
+          [
+            342.0,
+            3879.0
+          ]
+        ],
+        "time_taken": 0.3128929138183594,
+        "budget_met": true,
+        "features_used": [],
+        "accuracy_level": "standard"
+      },
+      "fast_precision": {
+        "success": true,
+        "corners": [
+          [
+            708.8484497070312,
+            1891.9400634765625
+          ],
+          [
+            2718.0,
+            1782.0
+          ],
+          [
+            2817.0,
+            4005.0
+          ],
+          [
+            378.0,
+            3888.0
+          ]
+        ],
+        "time_taken": 0.3242180347442627,
+        "budget_met": true,
+        "features_used": [],
+        "accuracy_level": "standard"
+      },
+      "ultra_precision": {
+        "success": true,
+        "corners": [
+          [
+            742.6470336914062,
+            1908.6197509765625
+          ],
+          [
+            2683.8466796875,
+            1772.35498046875
+          ],
+          [
+            2772.302490234375,
+            4016.556640625
+          ],
+          [
+            475.239501953125,
+            3889.962158203125
+          ]
+        ],
+        "time_taken": 0.502,
+        "budget_met": true,
+        "features_used": [
+          "multi_resolution_yolo",
+          "adaptive_subpixel",
+          "intelligent_geometric",
+          "selective_edge"
+        ],
+        "accuracy_level": "ultra_precision"
+      }
+    }
+  }
+}

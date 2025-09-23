@@ -1,0 +1,324 @@
+{
+  "test_summary": {
+    "target_accuracy": "<15px average error",
+    "target_time": "<2 seconds",
+    "test_description": "Ultra Precision API vs existing methods with real ground truth",
+    "images_tested": 3
+  },
+  "api_statistics": {
+    "YOLO Only": {
+      "avg_error": 19.362058652044865,
+      "min_error": 14.99363800039177,
+      "max_error": 25.362946103633227,
+      "avg_time": 0.15343562761942545,
+      "success_rate": 100.0
+    },
+    "Fast Precision": {
+      "avg_error": 23.891572827242356,
+      "min_error": 13.366079954264734,
+      "max_error": 30.84845784205366,
+      "avg_time": 0.26988840103149414,
+      "success_rate": 100.0
+    },
+    "Ultra Precision": {
+      "avg_error": 56.30879928098187,
+      "min_error": 44.28329729046128,
+      "max_error": 77.46157411606313,
+      "avg_time": 0.7103333333333334,
+      "success_rate": 100.0
+    }
+  },
+  "detailed_results": [
+    {
+      "image": "IMG_4779.JPG",
+      "ground_truth": [
+        [
+          820,
+          1948
+        ],
+        [
+          2692,
+          1790
+        ],
+        [
+          2712,
+          3859
+        ],
+        [
+          480,
+          3739
+        ]
+      ],
+      "YOLO Only": {
+        "success": true,
+        "corners": [
+          [
+            810.0,
+            1935.0
+          ],
+          [
+            2709.0,
+            1818.0
+          ],
+          [
+            2709.0,
+            3861.0
+          ],
+          [
+            486.0,
+            3735.0
+          ]
+        ],
+        "time_taken": 0.21075987815856934,
+        "accuracy_error": 14.99363800039177
+      },
+      "Fast Precision": {
+        "success": true,
+        "corners": [
+          [
+            810.0,
+            1935.0
+          ],
+          [
+            2709.0,
+            1782.0
+          ],
+          [
+            2701.97607421875,
+            3855.995361328125
+          ],
+          [
+            486.0,
+            3744.0
+          ]
+        ],
+        "time_taken": 0.29047703742980957,
+        "accuracy_error": 13.366079954264734
+      },
+      "Ultra Precision": {
+        "success": true,
+        "corners": [
+          [
+            847.1619873046875,
+            1929.05712890625
+          ],
+          [
+            2643.5849609375,
+            1782.1815185546875
+          ],
+          [
+            2664.199462890625,
+            3857.115478515625
+          ],
+          [
+            538.1810913085938,
+            3747.01904296875
+          ]
+        ],
+        "time_taken": 0.536,
+        "budget_met": true,
+        "features_used": [
+          "multi_resolution_yolo",
+          "adaptive_subpixel",
+          "intelligent_geometric",
+          "selective_edge"
+        ],
+        "accuracy_error": 47.18152643642122
+      }
+    },
+    {
+      "image": "IMG_4763.JPG",
+      "ground_truth": [
+        [
+          724,
+          2064
+        ],
+        [
+          2692,
+          1886
+        ],
+        [
+          2784,
+          4104
+        ],
+        [
+          441,
+          3979
+        ]
+      ],
+      "YOLO Only": {
+        "success": true,
+        "corners": [
+          [
+            738.0,
+            2052.0
+          ],
+          [
+            2691.0,
+            1926.0
+          ],
+          [
+            2772.0,
+            4077.0
+          ],
+          [
+            450.0,
+            3969.0
+          ]
+        ],
+        "time_taken": 0.11431193351745605,
+        "accuracy_error": 25.362946103633227
+      },
+      "Fast Precision": {
+        "success": true,
+        "corners": [
+          [
+            738.0,
+            2052.0
+          ],
+          [
+            2700.0,
+            1890.0
+          ],
+          [
+            2772.0,
+            4041.0
+          ],
+          [
+            449.3594055175781,
+            3962.693115234375
+          ]
+        ],
+        "time_taken": 0.2472090721130371,
+        "accuracy_error": 27.46018068540867
+      },
+      "Ultra Precision": {
+        "success": true,
+        "corners": [
+          [
+            796.0,
+            2052.0
+          ],
+          [
+            2635.386962890625,
+            1888.6361083984375
+          ],
+          [
+            2704.0,
+            4049.0
+          ],
+          [
+            524.0,
+            3975.0
+          ]
+        ],
+        "time_taken": 1.12,
+        "budget_met": true,
+        "features_used": [
+          "multi_resolution_yolo",
+          "adaptive_subpixel",
+          "intelligent_geometric",
+          "selective_edge"
+        ],
+        "accuracy_error": 77.46157411606313
+      }
+    },
+    {
+      "image": "IMG_4785.JPG",
+      "ground_truth": [
+        [
+          806,
+          2217
+        ],
+        [
+          2644,
+          2083
+        ],
+        [
+          2668,
+          4094
+        ],
+        [
+          441,
+          3984
+        ]
+      ],
+      "YOLO Only": {
+        "success": true,
+        "corners": [
+          [
+            810.0,
+            2187.0
+          ],
+          [
+            2637.0,
+            2070.0
+          ],
+          [
+            2655.0,
+            4104.0
+          ],
+          [
+            450.0,
+            3987.0
+          ]
+        ],
+        "time_taken": 0.13523507118225098,
+        "accuracy_error": 17.729591852109596
+      },
+      "Fast Precision": {
+        "success": true,
+        "corners": [
+          [
+            801.0,
+            2178.0
+          ],
+          [
+            2637.571533203125,
+            2109.146484375
+          ],
+          [
+            2713.218017578125,
+            4115.462890625
+          ],
+          [
+            445.76007080078125,
+            3978.737060546875
+          ]
+        ],
+        "time_taken": 0.27197909355163574,
+        "accuracy_error": 30.84845784205366
+      },
+      "Ultra Precision": {
+        "success": true,
+        "corners": [
+          [
+            839.527587890625,
+            2179.0
+          ],
+          [
+            2605.451416015625,
+            2077.058837890625
+          ],
+          [
+            2669.8505859375,
+            4125.341796875
+          ],
+          [
+            496.5522766113281,
+            3991.5029296875
+          ]
+        ],
+        "time_taken": 0.475,
+        "budget_met": true,
+        "features_used": [
+          "multi_resolution_yolo",
+          "adaptive_subpixel",
+          "intelligent_geometric",
+          "selective_edge"
+        ],
+        "accuracy_error": 44.28329729046128
+      }
+    }
+  ]
+}
