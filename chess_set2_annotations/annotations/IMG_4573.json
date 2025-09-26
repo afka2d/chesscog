@@ -1,0 +1,27 @@
+{
+  "image_path": "/Users/tonyblum/Downloads/chess_set2_images/IMG_4573.JPG",
+  "image_name": "IMG_4573.JPG",
+  "chess_set": "set2",
+  "corners": [
+    [
+      48.57265090942383,
+      408.87945556640625
+    ],
+    [
+      699.2000122070312,
+      406.6000061035156
+    ],
+    [
+      699.2000122070312,
+      827.4000244140625
+    ],
+    [
+      54.400001525878906,
+      846.5999755859375
+    ]
+  ],
+  "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+  "annotation_method": "test_single",
+  "corner_detection_api": "robust_port_8005",
+  "timestamp": "2025-09-22T23:21:11.588425"
+}

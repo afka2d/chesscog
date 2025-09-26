@@ -1,0 +1,24 @@
+{
+  "processing_summary": {
+    "total_images": 101,
+    "completed": 0,
+    "skipped": 0,
+    "failed": 8,
+    "completion_rate": 0.0
+  },
+  "chess_set": "set2",
+  "start_time": "2025-09-22T23:20:16.606398",
+  "end_time": "2025-09-22T23:20:37.170756",
+  "completed_files": [],
+  "skipped_files": [],
+  "failed_files": [
+    "/Users/tonyblum/Downloads/ChatGPT Image Jun 4, 2025, 02_17_46 AM.png",
+    "/Users/tonyblum/Downloads/ChatGPT Image Jun 4, 2025, 06_40_59 PM.png",
+    "/Users/tonyblum/Downloads/ChatGPT Image May 8, 2025, 12_41_03 AM.png",
+    "/Users/tonyblum/Downloads/IMG_1CDD78479E31-1.jpeg",
+    "/Users/tonyblum/Downloads/IMG_2D52761B4787-1.jpeg",
+    "/Users/tonyblum/Downloads/chess_set2_images/IMG_4573.JPG",
+    "/Users/tonyblum/Downloads/chess_set2_images/IMG_4670.JPG",
+    "/Users/tonyblum/Downloads/chess_set2_images/IMG_4674.JPG"
+  ]
+}

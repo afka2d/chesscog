@@ -1,0 +1,14 @@
+{
+  "marshall_models": {
+    "corner_detection_marshall.pt": "Improved corner detection using Marshall data",
+    "occupancy_marshall.pt": "Improved occupancy detection using Marshall data",
+    "color_classification_marshall.pt": "Improved color classification using Marshall data",
+    "piece_classification_marshall.pt": "Improved piece classification using Marshall data"
+  },
+  "training_data": {
+    "total_annotations": 541,
+    "excluded_images": 54,
+    "chess_set": "marshall"
+  },
+  "note": "These models are safe copies and do not affect existing working models"
+}
