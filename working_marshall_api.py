@@ -129,16 +129,12 @@ def extract_square(warped_board, rank, file):
     return square
 
 def load_marshall_occupancy_model():
-    """Load the Marshall occupancy model (same method as comprehensive test)."""
+    """Load the Marshall occupancy model with correct architecture."""
     try:
-        # Load the original model architecture first
-        original_model_path = Path("runs/occupancy_classifier/ResNet/ResNet.pt")
-        if not original_model_path.exists():
-            logger.error(f"❌ Original occupancy model not found at {original_model_path}")
-            return None
-        
-        model = torch.load(str(original_model_path), map_location='cpu', weights_only=False)
-        logger.info("✅ Original occupancy model architecture loaded")
+        # Create the correct architecture (ResNet18 with 2 outputs)
+        model = models.resnet18(weights=None)
+        model.fc = nn.Linear(model.fc.in_features, 2)  # 2 outputs for occupancy
+        logger.info("✅ Marshall occupancy model architecture created (ResNet18, 2 outputs)")
         
         # Load the Marshall weights (state_dict)
         marshall_path = Path("models_marshall_improved/occupancy_marshall.pt")
@@ -149,9 +145,16 @@ def load_marshall_occupancy_model():
         marshall_weights = torch.load(str(marshall_path), map_location='cpu', weights_only=True)
         logger.info("✅ Marshall occupancy weights loaded")
         
-        # Apply the Marshall weights to the original model architecture
-        model.load_state_dict(marshall_weights)
-        logger.info("✅ Marshall weights applied to model")
+        # Remove 'model.' prefix from keys if present
+        new_state_dict = {}
+        for k, v in marshall_weights.items():
+            if k.startswith('model.'):
+                new_state_dict[k[6:]] = v  # Remove 'model.' prefix
+            else:
+                new_state_dict[k] = v
+        
+        model.load_state_dict(new_state_dict)
+        logger.info("✅ Marshall occupancy model weights loaded successfully")
         
         model.eval()
         return model
@@ -185,6 +188,33 @@ def load_original_piece_classifier():
         
     except Exception as e:
         logger.error(f"❌ Error loading original piece classifier: {e}")
+        return None
+
+def load_balanced_piece_classifier():
+    """Load the BALANCED piece classification model (EfficientNet-B0, trained on both datasets)."""
+    try:
+        model_path = Path("models_marshall_improved/piece_classifier_balanced.pt")
+        if not model_path.exists():
+            logger.error(f"❌ Balanced piece classifier not found at {model_path}")
+            return None
+        
+        # Create EfficientNet-B0 architecture (same as original)
+        model = models.efficientnet_b0(weights=None)
+        num_ftrs = model.classifier[1].in_features
+        model.classifier[1] = nn.Linear(num_ftrs, len(PIECE_TYPE_LABELS))
+        logger.info("✅ Balanced piece classifier architecture created (EfficientNet-B0)")
+        
+        # Load the state_dict
+        state_dict = torch.load(str(model_path), map_location='cpu', weights_only=True)
+        model.load_state_dict(state_dict)
+        logger.info("✅ Balanced piece classifier weights loaded")
+        
+        model.eval()
+        logger.info("✅ Balanced piece classifier loaded successfully")
+        return model
+        
+    except Exception as e:
+        logger.error(f"❌ Error loading balanced piece classifier: {e}")
         return None
 
 def load_combined_piece_classifier():
@@ -242,13 +272,13 @@ async def startup_event():
         logger.error(f"Color classifier model not found at {color_model_path}")
         raise RuntimeError("Color classifier model not found")
     
-    # Load COMBINED piece type classifier (trained on both Marshall + Grey datasets)
-    logger.info("Loading ORIGINAL piece type classifier (combined models don't work on grey data)...")
-    piece_type_model = load_original_piece_classifier()
+    # Load BALANCED piece type classifier (trained on both Marshall + Grey datasets)
+    logger.info("Loading BALANCED piece type classifier (trained on both datasets)...")
+    piece_type_model = load_balanced_piece_classifier()
     if piece_type_model is None:
-        logger.error("❌ Failed to load original piece classifier")
-        raise RuntimeError("Original piece classifier not found")
-    logger.info("✅ ORIGINAL piece type classifier loaded successfully")
+        logger.error("❌ Failed to load balanced piece classifier")
+        raise RuntimeError("Balanced piece classifier not found")
+    logger.info("✅ BALANCED piece type classifier loaded successfully")
     
     logger.info("🎉 Marshall Improved API startup completed successfully")
 
@@ -265,7 +295,7 @@ async def health_check():
         "models": {
             "occupancy": "Marshall-trained ResNet",
             "color": "Original MobileNetV2",
-            "piece_type": "Combined ResNet18 (Marshall + Grey Background)"
+            "piece_type": "Balanced EfficientNet-B0 (Marshall + Grey Background)"
         }
     })
 
@@ -332,9 +362,9 @@ async def recognize_chess_position_with_corners(
         pieces_1d = [None] * 64
         occupancy_list = [False] * 64
         
-        # Transforms for occupancy detection (matching comprehensive test exactly)
+        # Transforms for occupancy detection (matching Marshall training - simple 0-1 normalization)
         def preprocess_square_for_occupancy(square_img):
-            """Preprocess square for occupancy detection (same as comprehensive test)"""
+            """Preprocess square for occupancy detection (Marshall training preprocessing)"""
             import cv2
             import numpy as np
             square = cv2.resize(square_img, (100, 100))
@@ -343,16 +373,16 @@ async def recognize_chess_position_with_corners(
             square = torch.from_numpy(square).permute(2, 0, 1)
             return square
         
-        # Transforms for color classification (matching ORIGINAL training - ImageNet normalization)
+        # Transforms for color classification (matching original training - ImageNet normalization)
         color_transform = transforms.Compose([
-            transforms.Resize(100),  # Original uses 100x100
+            transforms.Resize(64),  # Original uses 64x64
             transforms.ToTensor(),
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])  # ImageNet normalization
         ])
         
-        # Transforms for piece type classification (matching ORIGINAL training - 100x100, ImageNet normalization)
+        # Transforms for piece type classification (matching balanced training - ImageNet normalization)
         piece_type_transform = transforms.Compose([
-            transforms.Resize(100),  # Original model uses 100x100
+            transforms.Resize(100),  # Balanced model uses 100x100
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])  # ImageNet normalization
         ])
@@ -367,7 +397,7 @@ async def recognize_chess_position_with_corners(
             "model_info": {
                 "occupancy": "Marshall-trained ResNet",
                 "color": "Original MobileNetV2", 
-                "piece_type": "Combined ResNet18 (Marshall + Grey Background)"
+                "piece_type": "Balanced EfficientNet-B0 (Marshall + Grey Background)"
             }
         }
         
@@ -404,7 +434,7 @@ async def recognize_chess_position_with_corners(
                             # Convert BGR to RGB for PIL (square_img is in BGR from OpenCV)
                             square_rgb = cv2.cvtColor(square_img, cv2.COLOR_BGR2RGB)
                             
-                            # Color classification
+                            # Color classification (use original preprocessing)
                             input_tensor_color = color_transform(Image.fromarray(square_rgb)).unsqueeze(0)
                             with torch.no_grad():
                                 color_output = color_model(input_tensor_color)
