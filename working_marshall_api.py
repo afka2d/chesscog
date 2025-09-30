@@ -59,9 +59,10 @@ def _get_color_model_architecture(num_classes):
 
 # Helper to get piece type model architecture (must match training script)
 def _get_piece_type_model_architecture(num_classes):
-    model = models.resnet18(weights=None)  # ResNet18 for combined piece classifier
-    num_ftrs = model.fc.in_features
-    model.fc = nn.Linear(num_ftrs, num_classes)
+    # Use EfficientNet-B0 (same as original API, not ResNet18)
+    model = models.efficientnet_b0(weights=None)
+    num_ftrs = model.classifier[1].in_features
+    model.classifier[1] = nn.Linear(num_ftrs, num_classes)
     return model
 
 def sort_corner_points(corners):
@@ -159,30 +160,59 @@ def load_marshall_occupancy_model():
         logger.error(f"❌ Error loading Marshall occupancy model: {e}")
         return None
 
-def load_combined_piece_classifier():
-    """Load the Marshall piece classification model with correct architecture."""
+def load_original_piece_classifier():
+    """Load the ORIGINAL piece classification model (EfficientNet-B0, production model)."""
     try:
-        # Load the Marshall piece classifier with correct architecture
-        model_path = Path("models_marshall_improved/piece_marshall_correct_architecture.pt")
+        model_path = Path("models/piece_classifier_simple.pt")
         if not model_path.exists():
-            logger.error(f"❌ Marshall piece classifier not found at {model_path}")
+            logger.error(f"❌ Original piece classifier not found at {model_path}")
             return None
         
-        # Create the model architecture first
-        model = _get_piece_type_model_architecture(len(PIECE_TYPE_LABELS))
-        logger.info("✅ Marshall piece classifier architecture created")
+        # Create EfficientNet-B0 architecture (same as production)
+        model = models.efficientnet_b0(weights=None)
+        num_ftrs = model.classifier[1].in_features
+        model.classifier[1] = nn.Linear(num_ftrs, len(PIECE_TYPE_LABELS))
+        logger.info("✅ Original piece classifier architecture created (EfficientNet-B0)")
         
         # Load the state_dict
         state_dict = torch.load(str(model_path), map_location='cpu', weights_only=True)
         model.load_state_dict(state_dict)
-        logger.info("✅ Marshall piece classifier weights loaded")
+        logger.info("✅ Original piece classifier weights loaded")
         
         model.eval()
-        logger.info("✅ Marshall piece classifier loaded successfully")
+        logger.info("✅ Original piece classifier loaded successfully")
         return model
         
     except Exception as e:
-        logger.error(f"❌ Error loading Marshall piece classifier: {e}")
+        logger.error(f"❌ Error loading original piece classifier: {e}")
+        return None
+
+def load_combined_piece_classifier():
+    """Load the COMBINED piece classification model (trained on both datasets)."""
+    try:
+        # Load the combined piece classifier (ResNet18 trained on Marshall + Grey data)
+        model_path = Path("models_marshall_improved/combined_piece_classifier.pt")
+        if not model_path.exists():
+            logger.error(f"❌ Combined piece classifier not found at {model_path}")
+            return None
+        
+        # Create ResNet18 architecture (combined model uses ResNet18, not EfficientNet)
+        model = models.resnet18(weights=None)
+        num_ftrs = model.fc.in_features
+        model.fc = nn.Linear(num_ftrs, len(PIECE_TYPE_LABELS))
+        logger.info("✅ Combined piece classifier architecture created (ResNet18)")
+        
+        # Load the state_dict
+        state_dict = torch.load(str(model_path), map_location='cpu', weights_only=True)
+        model.load_state_dict(state_dict)
+        logger.info("✅ Combined piece classifier weights loaded")
+        
+        model.eval()
+        logger.info("✅ Combined piece classifier loaded successfully")
+        return model
+        
+    except Exception as e:
+        logger.error(f"❌ Error loading combined piece classifier: {e}")
         return None
 
 @app.on_event("startup")
@@ -212,13 +242,13 @@ async def startup_event():
         logger.error(f"Color classifier model not found at {color_model_path}")
         raise RuntimeError("Color classifier model not found")
     
-    # Load combined piece type classifier
-    logger.info("Loading combined piece type classifier...")
-    piece_type_model = load_combined_piece_classifier()
+    # Load COMBINED piece type classifier (trained on both Marshall + Grey datasets)
+    logger.info("Loading ORIGINAL piece type classifier (combined models don't work on grey data)...")
+    piece_type_model = load_original_piece_classifier()
     if piece_type_model is None:
-        logger.error("❌ Failed to load combined piece classifier")
-        raise RuntimeError("Combined piece classifier not found")
-    logger.info("✅ Combined piece type classifier loaded successfully")
+        logger.error("❌ Failed to load original piece classifier")
+        raise RuntimeError("Original piece classifier not found")
+    logger.info("✅ ORIGINAL piece type classifier loaded successfully")
     
     logger.info("🎉 Marshall Improved API startup completed successfully")
 
@@ -313,16 +343,18 @@ async def recognize_chess_position_with_corners(
             square = torch.from_numpy(square).permute(2, 0, 1)
             return square
         
-        # Transforms for color classification (matching Marshall training - simple normalization)
+        # Transforms for color classification (matching ORIGINAL training - ImageNet normalization)
         color_transform = transforms.Compose([
-            transforms.Resize((224, 224)),
-            transforms.ToTensor()
+            transforms.Resize(100),  # Original uses 100x100
+            transforms.ToTensor(),
+            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])  # ImageNet normalization
         ])
         
-        # Transforms for piece type classification (matching Marshall training - simple normalization)
+        # Transforms for piece type classification (matching ORIGINAL training - 100x100, ImageNet normalization)
         piece_type_transform = transforms.Compose([
-            transforms.Resize((224, 224)),
-            transforms.ToTensor()
+            transforms.Resize(100),  # Original model uses 100x100
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])  # ImageNet normalization
         ])
         
         # Debug information
