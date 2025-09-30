@@ -1,0 +1,394 @@
+{
+  "dataset": "grey_background",
+  "timestamp": "2025-09-27 19:26:16",
+  "original_api": {
+    "url": "http://localhost:8001",
+    "results": [
+      {
+        "image_name": "NEW_20250805_135338_012.JPG",
+        "success": false,
+        "error": "HTTPConnectionPool(host='localhost', port=8001): Max retries exceeded with url: /recognize_chess_position_with_corners (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x112c2f0a0>: Failed to establish a new connection: [Errno 61] Connection refused'))",
+        "processing_time": 0,
+        "dataset": "grey_background"
+      },
+      {
+        "image_name": "NEW_20250805_135338_011.JPG",
+        "success": false,
+        "error": "HTTPConnectionPool(host='localhost', port=8001): Max retries exceeded with url: /recognize_chess_position_with_corners (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x112c2f790>: Failed to establish a new connection: [Errno 61] Connection refused'))",
+        "processing_time": 0,
+        "dataset": "grey_background"
+      },
+      {
+        "image_name": "IMG_4686.JPG",
+        "success": false,
+        "error": "HTTPConnectionPool(host='localhost', port=8001): Max retries exceeded with url: /recognize_chess_position_with_corners (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x112c2eef0>: Failed to establish a new connection: [Errno 61] Connection refused'))",
+        "processing_time": 0,
+        "dataset": "grey_background"
+      },
+      {
+        "image_name": "NEW_20250805_135338_001.JPG",
+        "success": false,
+        "error": "HTTPConnectionPool(host='localhost', port=8001): Max retries exceeded with url: /recognize_chess_position_with_corners (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x112c78160>: Failed to establish a new connection: [Errno 61] Connection refused'))",
+        "processing_time": 0,
+        "dataset": "grey_background"
+      },
+      {
+        "image_name": "IMG_4752.JPG",
+        "success": false,
+        "error": "HTTPConnectionPool(host='localhost', port=8001): Max retries exceeded with url: /recognize_chess_position_with_corners (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x112c78a60>: Failed to establish a new connection: [Errno 61] Connection refused'))",
+        "processing_time": 0,
+        "dataset": "grey_background"
+      },
+      {
+        "image_name": "NEW_20250805_135338_000.JPG",
+        "success": false,
+        "error": "HTTPConnectionPool(host='localhost', port=8001): Max retries exceeded with url: /recognize_chess_position_with_corners (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x112c79360>: Failed to establish a new connection: [Errno 61] Connection refused'))",
+        "processing_time": 0,
+        "dataset": "grey_background"
+      },
+      {
+        "image_name": "NEW_20250805_135338_007.JPG",
+        "success": false,
+        "error": "HTTPConnectionPool(host='localhost', port=8001): Max retries exceeded with url: /recognize_chess_position_with_corners (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x112c2fb20>: Failed to establish a new connection: [Errno 61] Connection refused'))",
+        "processing_time": 0,
+        "dataset": "grey_background"
+      },
+      {
+        "image_name": "IMG_4763.JPG",
+        "success": false,
+        "error": "HTTPConnectionPool(host='localhost', port=8001): Max retries exceeded with url: /recognize_chess_position_with_corners (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x112c2d930>: Failed to establish a new connection: [Errno 61] Connection refused'))",
+        "processing_time": 0,
+        "dataset": "grey_background"
+      },
+      {
+        "image_name": "NEW_20250805_135338_005.JPG",
+        "success": false,
+        "error": "HTTPConnectionPool(host='localhost', port=8001): Max retries exceeded with url: /recognize_chess_position_with_corners (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x112c2f790>: Failed to establish a new connection: [Errno 61] Connection refused'))",
+        "processing_time": 0,
+        "dataset": "grey_background"
+      },
+      {
+        "image_name": "NEW_20250805_135338_002.JPG",
+        "success": false,
+        "error": "HTTPConnectionPool(host='localhost', port=8001): Max retries exceeded with url: /recognize_chess_position_with_corners (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x112c78df0>: Failed to establish a new connection: [Errno 61] Connection refused'))",
+        "processing_time": 0,
+        "dataset": "grey_background"
+      },
+      {
+        "image_name": "IMG_4764.JPG",
+        "success": false,
+        "error": "HTTPConnectionPool(host='localhost', port=8001): Max retries exceeded with url: /recognize_chess_position_with_corners (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x112c784f0>: Failed to establish a new connection: [Errno 61] Connection refused'))",
+        "processing_time": 0,
+        "dataset": "grey_background"
+      },
+      {
+        "image_name": "IMG_4781.JPG",
+        "success": false,
+        "error": "HTTPConnectionPool(host='localhost', port=8001): Max retries exceeded with url: /recognize_chess_position_with_corners (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x112c2f400>: Failed to establish a new connection: [Errno 61] Connection refused'))",
+        "processing_time": 0,
+        "dataset": "grey_background"
+      },
+      {
+        "image_name": "NEW_20250805_135338_004.JPG",
+        "success": false,
+        "error": "HTTPConnectionPool(host='localhost', port=8001): Max retries exceeded with url: /recognize_chess_position_with_corners (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x112c2da20>: Failed to establish a new connection: [Errno 61] Connection refused'))",
+        "processing_time": 0,
+        "dataset": "grey_background"
+      },
+      {
+        "image_name": "IMG_4778.JPG",
+        "success": false,
+        "error": "HTTPConnectionPool(host='localhost', port=8001): Max retries exceeded with url: /recognize_chess_position_with_corners (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x112c2f910>: Failed to establish a new connection: [Errno 61] Connection refused'))",
+        "processing_time": 0,
+        "dataset": "grey_background"
+      },
+      {
+        "image_name": "IMG_4785.JPG",
+        "success": false,
+        "error": "HTTPConnectionPool(host='localhost', port=8001): Max retries exceeded with url: /recognize_chess_position_with_corners (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x112c78610>: Failed to establish a new connection: [Errno 61] Connection refused'))",
+        "processing_time": 0,
+        "dataset": "grey_background"
+      },
+      {
+        "image_name": "IMG_4767.JPG",
+        "success": false,
+        "error": "HTTPConnectionPool(host='localhost', port=8001): Max retries exceeded with url: /recognize_chess_position_with_corners (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x112c78d60>: Failed to establish a new connection: [Errno 61] Connection refused'))",
+        "processing_time": 0,
+        "dataset": "grey_background"
+      },
+      {
+        "image_name": "NEW_20250805_135338_009.JPG",
+        "success": false,
+        "error": "HTTPConnectionPool(host='localhost', port=8001): Max retries exceeded with url: /recognize_chess_position_with_corners (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x112c79c60>: Failed to establish a new connection: [Errno 61] Connection refused'))",
+        "processing_time": 0,
+        "dataset": "grey_background"
+      },
+      {
+        "image_name": "NEW_20250805_135338_006.JPG",
+        "success": false,
+        "error": "HTTPConnectionPool(host='localhost', port=8001): Max retries exceeded with url: /recognize_chess_position_with_corners (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x112c2eaa0>: Failed to establish a new connection: [Errno 61] Connection refused'))",
+        "processing_time": 0,
+        "dataset": "grey_background"
+      },
+      {
+        "image_name": "IMG_4859.JPG",
+        "success": false,
+        "error": "HTTPConnectionPool(host='localhost', port=8001): Max retries exceeded with url: /recognize_chess_position_with_corners (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x112c2e740>: Failed to establish a new connection: [Errno 61] Connection refused'))",
+        "processing_time": 0,
+        "dataset": "grey_background"
+      },
+      {
+        "image_name": "NEW_20250805_135338_003.JPG",
+        "success": false,
+        "error": "HTTPConnectionPool(host='localhost', port=8001): Max retries exceeded with url: /recognize_chess_position_with_corners (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x112c78d00>: Failed to establish a new connection: [Errno 61] Connection refused'))",
+        "processing_time": 0,
+        "dataset": "grey_background"
+      }
+    ]
+  },
+  "marshall_api": {
+    "url": "http://localhost:8003",
+    "results": [
+      {
+        "image_name": "NEW_20250805_135338_012.JPG",
+        "success": true,
+        "predicted_fen": "3rr1k1/1pp2pp1/5q2/p2NbPp1/Q1BnN1bP/1K1PRnP1/2P2PB1/4R3 w - - 0 1",
+        "true_fen": "3rr1k1/1pp2pp1/5q2/p2NbPp1/Q1BnN1bP/1K1PRnP1/2P2PB1/4R3 w - - 0 1",
+        "pieces_detected": 28,
+        "true_pieces": 28,
+        "correct_pieces": 28,
+        "accuracy": 100.0,
+        "processing_time": 4.107267141342163,
+        "dataset": "grey_background"
+      },
+      {
+        "image_name": "NEW_20250805_135338_011.JPG",
+        "success": true,
+        "predicted_fen": "r5kr/2p2pp1/5q2/pp1NbPp1/Q1BnN1bP/1K1P1nP1/2P2PB1/R6R w - - 0 1",
+        "true_fen": "r5kr/2p2pp1/5q2/pp1NbPp1/Q1BnN1bP/1K1P1nP1/2P2PB1/R6R w - - 0 1",
+        "pieces_detected": 28,
+        "true_pieces": 28,
+        "correct_pieces": 28,
+        "accuracy": 100.0,
+        "processing_time": 4.477663993835449,
+        "dataset": "grey_background"
+      },
+      {
+        "image_name": "IMG_4686.JPG",
+        "success": true,
+        "predicted_fen": "8/8/2p2P2/8/4r3/1r6/4K3/8 w - - 0 1",
+        "true_fen": "8/8/2p2P2/8/4r3/1r6/4K3/8 w - - 0 1",
+        "pieces_detected": 5,
+        "true_pieces": 5,
+        "correct_pieces": 5,
+        "accuracy": 100.0,
+        "processing_time": 1.360605001449585,
+        "dataset": "grey_background"
+      },
+      {
+        "image_name": "NEW_20250805_135338_001.JPG",
+        "success": true,
+        "predicted_fen": "3r1r2/6p1/1pk2nq1/p2b1pN1/1bP1n1p1/1P1P1B2/1B1R1QN1/1K5R w - - 0 1",
+        "true_fen": "3r1r2/6p1/1pk2nq1/p2b1pN1/1bP1nBp1/1P1P1B2/1B1R1QN1/1K5R w - - 0 1",
+        "pieces_detected": 24,
+        "true_pieces": 25,
+        "correct_pieces": 24,
+        "accuracy": 96.0,
+        "processing_time": 4.080083847045898,
+        "dataset": "grey_background"
+      },
+      {
+        "image_name": "IMG_4752.JPG",
+        "success": true,
+        "predicted_fen": "8/3k4/2n5/1n1p1p2/4P3/2N2P2/PPP5/1N1Q4 w - - 0 1",
+        "true_fen": "8/3k4/2n1q3/1n1p1p2/4P3/2N2P2/PPP5/1N1Q4 w - - 0 1",
+        "pieces_detected": 13,
+        "true_pieces": 14,
+        "correct_pieces": 13,
+        "accuracy": 92.85714285714286,
+        "processing_time": 2.349085807800293,
+        "dataset": "grey_background"
+      },
+      {
+        "image_name": "NEW_20250805_135338_000.JPG",
+        "success": true,
+        "predicted_fen": "2kr1r2/2pb1pp1/1pq2n2/p1bp2pp/2P4P/1P1P1nP1/1BQK1P2/1N1R1BNR w - - 0 1",
+        "true_fen": "2kr1r2/2pb1pp1/1pq2n2/p1bp2pp/2P4P/1P1P1nP1/1BQK1P2/1N1R1BNR w - - 0 1",
+        "pieces_detected": 30,
+        "true_pieces": 30,
+        "correct_pieces": 30,
+        "accuracy": 100.0,
+        "processing_time": 4.286065101623535,
+        "dataset": "grey_background"
+      },
+      {
+        "image_name": "NEW_20250805_135338_007.JPG",
+        "success": true,
+        "predicted_fen": "rnbqk2r/ppp2ppp/3b1n2/3pp3/4P3/2NP1NP1/2P2PBP/R1BQ1RK1 w - - 0 1",
+        "true_fen": "rnbqk2r/ppp2ppp/3b1n2/3pp3/4P3/2NP1NP1/2P2PBP/R1BQ1RK1 w kq - 0 1",
+        "pieces_detected": 30,
+        "true_pieces": 30,
+        "correct_pieces": 30,
+        "accuracy": 100.0,
+        "processing_time": 4.276944160461426,
+        "dataset": "grey_background"
+      },
+      {
+        "image_name": "IMG_4763.JPG",
+        "success": true,
+        "predicted_fen": "rnbqk2r/1ppp1pp1/5n2/2b5/2BpP3/2N2N2/1PP2PPP/R1BQK2R w - - 0 1",
+        "true_fen": "rnbqk2r/1ppp1ppp/5n2/2b5/2BpP3/2N2N2/1PP2PPP/R1BQK2R w KQkq - 0 1",
+        "pieces_detected": 28,
+        "true_pieces": 29,
+        "correct_pieces": 28,
+        "accuracy": 96.55172413793103,
+        "processing_time": 4.12639307975769,
+        "dataset": "grey_background"
+      },
+      {
+        "image_name": "NEW_20250805_135338_005.JPG",
+        "success": true,
+        "predicted_fen": "3rr1k1/2p2pp1/5q2/pp1NbPp1/Q1BnN1bP/1K1P1nP1/2P2PB1/R3R3 w - - 0 1",
+        "true_fen": "3rr1k1/2p2pp1/5q2/pp1NbPp1/Q1BnN1bP/1K1P1nP1/2P2PB1/R3R3 w - - 0 1",
+        "pieces_detected": 28,
+        "true_pieces": 28,
+        "correct_pieces": 28,
+        "accuracy": 100.0,
+        "processing_time": 4.113765239715576,
+        "dataset": "grey_background"
+      },
+      {
+        "image_name": "NEW_20250805_135338_002.JPG",
+        "success": true,
+        "predicted_fen": "r3k3/2p1rpp1/4b1q1/pp2B1p1/Q1Pn1R1P/2bPnPPB/4NNK1/3R4 w - - 0 1",
+        "true_fen": "r3k3/2p1rpp1/4b1q1/pp2B1p1/Q1Pn1R1P/2bPnPPB/4NNK1/3R4 w q - 0 1",
+        "pieces_detected": 27,
+        "true_pieces": 27,
+        "correct_pieces": 27,
+        "accuracy": 100.0,
+        "processing_time": 3.910473108291626,
+        "dataset": "grey_background"
+      },
+      {
+        "image_name": "IMG_4764.JPG",
+        "success": true,
+        "predicted_fen": "rnbqk2r/1ppp1ppP/5n2/2b5/2BNP3/2N5/1PP2PPP/R1BQK2R w - - 0 1",
+        "true_fen": "rnbqk2r/1ppp1ppp/5n2/2b5/2BNP3/2N5/1PP2PPP/R1BQK2R w KQkq - 0 1",
+        "pieces_detected": 28,
+        "true_pieces": 28,
+        "correct_pieces": 27,
+        "accuracy": 96.42857142857143,
+        "processing_time": 4.018673896789551,
+        "dataset": "grey_background"
+      },
+      {
+        "image_name": "IMG_4781.JPG",
+        "success": true,
+        "predicted_fen": "r1b5/1ppk1ppp/8/4n1Bn/N1B1K1P1/7P/1PP2P2/R7 w - - 0 1",
+        "true_fen": "r1b5/1ppk1ppp/8/4n1Bn/N1B1K1P1/7P/1PP2P2/R7 w - - 0 1",
+        "pieces_detected": 20,
+        "true_pieces": 20,
+        "correct_pieces": 20,
+        "accuracy": 100.0,
+        "processing_time": 3.311002016067505,
+        "dataset": "grey_background"
+      },
+      {
+        "image_name": "NEW_20250805_135338_004.JPG",
+        "success": true,
+        "predicted_fen": "r2q1rk1/1pp2pp1/2n2n1p/p2Pb3/6bP/2NPB1P1/2PQ1PB1/R3R1K1 w - - 0 1",
+        "true_fen": "r2q1rk1/1pp2pp1/2n2n1p/p2Pb3/6bP/2NPB1P1/2PQ1PB1/R3R1K1 w - - 0 1",
+        "pieces_detected": 27,
+        "true_pieces": 27,
+        "correct_pieces": 27,
+        "accuracy": 100.0,
+        "processing_time": 3.834218978881836,
+        "dataset": "grey_background"
+      },
+      {
+        "image_name": "IMG_4778.JPG",
+        "success": true,
+        "predicted_fen": "r1b3k1/1pp2ppP/2n2n2/4p3/2B5/2N4P/1PP2PPK/R1Br4 w - - 0 1",
+        "true_fen": "r1b3k1/1pp2ppp/2n2n2/4p3/2B5/2N4P/1PP2PPK/R1Br4 w - - 0 1",
+        "pieces_detected": 22,
+        "true_pieces": 22,
+        "correct_pieces": 21,
+        "accuracy": 95.45454545454545,
+        "processing_time": 3.2106199264526367,
+        "dataset": "grey_background"
+      },
+      {
+        "image_name": "IMG_4785.JPG",
+        "success": true,
+        "predicted_fen": "r1b5/2p1kpp1/7p/1p2n1Bn/N4PP1/2P2B1P/1P4K1/3R4 w - - 0 1",
+        "true_fen": "r1b5/2p1kpp1/7p/1p2n1Bn/N3KPP1/2P2B1P/1P6/3R4 w - - 0 1",
+        "pieces_detected": 20,
+        "true_pieces": 20,
+        "correct_pieces": 19,
+        "accuracy": 95.0,
+        "processing_time": 3.0627617835998535,
+        "dataset": "grey_background"
+      },
+      {
+        "image_name": "IMG_4767.JPG",
+        "success": true,
+        "predicted_fen": "rnbqk2r/1pp2pp1/3p1n2/8/2BQP3/2N5/1PP2PPP/R1B1K2R w - - 0 1",
+        "true_fen": "rnbqk2r/1pp2ppp/3p1n2/8/2BQP3/2N5/1PP2PPP/R1B1K2R w KQkq - 0 1",
+        "pieces_detected": 25,
+        "true_pieces": 26,
+        "correct_pieces": 25,
+        "accuracy": 96.15384615384616,
+        "processing_time": 3.7529561519622803,
+        "dataset": "grey_background"
+      },
+      {
+        "image_name": "NEW_20250805_135338_009.JPG",
+        "success": true,
+        "predicted_fen": "3r1r2/3b2p1/1pkb1nq1/p4p2/2P1n1p1/1P1P1B2/1BN2QN1/1K1R3R w - - 0 1",
+        "true_fen": "3r1r2/3b2p1/1pkb1nq1/p4p2/2P1n1p1/1P1P1B2/1BN2QN1/1K1R3R w - - 0 1",
+        "pieces_detected": 24,
+        "true_pieces": 24,
+        "correct_pieces": 24,
+        "accuracy": 100.0,
+        "processing_time": 3.5100438594818115,
+        "dataset": "grey_background"
+      },
+      {
+        "image_name": "NEW_20250805_135338_006.JPG",
+        "success": true,
+        "predicted_fen": "3r1r2/3b2pk/1p1b2q1/p2N1p1p/Q1P1n1pP/1P1P1n2/1B4N1/1K1R1R1B w - - 0 1",
+        "true_fen": "3r1r2/3b2pk/1p1b2q1/p2N1p1p/Q1P1n1pP/1P1P1n2/1B4N1/1K1R1R1B w - - 0 1",
+        "pieces_detected": 26,
+        "true_pieces": 26,
+        "correct_pieces": 26,
+        "accuracy": 100.0,
+        "processing_time": 3.907343864440918,
+        "dataset": "grey_background"
+      },
+      {
+        "image_name": "IMG_4859.JPG",
+        "success": true,
+        "predicted_fen": "8/1K2N3/8/5p2/4p1Q1/8/2k5/3R4 w - - 0 1",
+        "true_fen": "8/1K2N3/8/5p2/4p1Q1/8/2k5/3R4 w - - 0 1",
+        "pieces_detected": 7,
+        "true_pieces": 7,
+        "correct_pieces": 7,
+        "accuracy": 100.0,
+        "processing_time": 1.3286540508270264,
+        "dataset": "grey_background"
+      },
+      {
+        "image_name": "NEW_20250805_135338_003.JPG",
+        "success": true,
+        "predicted_fen": "r5k1/2p2pp1/8/pp1NbPpr/Q1B1N1bP/1K1PqnP1/2Pn1PB1/R6R w - - 0 1",
+        "true_fen": "r5k1/2p2pp1/8/pp1NbPpr/Q1B1N1bP/1K1PqnP1/2Pn1PB1/R6R w - - 0 1",
+        "pieces_detected": 28,
+        "true_pieces": 28,
+        "correct_pieces": 28,
+        "accuracy": 100.0,
+        "processing_time": 3.9566829204559326,
+        "dataset": "grey_background"
+      }
+    ]
+  }
+}
