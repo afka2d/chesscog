@@ -482,7 +482,9 @@ def main():
     print("🏆 PROVEN PERFORMANCE: 13.0px accuracy with bias resistance")
     print("")
     
-    uvicorn.run(app, host="0.0.0.0", port=8005)
+    import sys
+    port = int(sys.argv[1]) if len(sys.argv) > 1 else 8005
+    uvicorn.run(app, host="0.0.0.0", port=port)
 
 if __name__ == "__main__":
     main()

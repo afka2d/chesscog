@@ -527,7 +527,9 @@ async def recognize_chess_position_with_corners(
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
-    print("🚀 Starting Marshall Improved API on port 8003")
+    import sys
+    port = int(sys.argv[1]) if len(sys.argv) > 1 else 8003
+    print("🚀 Starting Marshall Improved API on port", port)
     print("📍 This uses improved Marshall models for better accuracy")
     print("🔧 Same interface as production API")
-    uvicorn.run(app, host="0.0.0.0", port=8003)
+    uvicorn.run(app, host="0.0.0.0", port=port)
