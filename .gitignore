@@ -128,3 +128,11 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Marshall2 training images (too large for GitHub)
+marshall2_training_images/*.jpg
+marshall2_training_images/*.HEIC
+marshall2_training_images/visualizations/
+
+# Keep annotations (small, critical data)
+!marshall2_training_images/annotations/

@@ -1,0 +1,30 @@
+{
+  "image_path": "marshall2_training_images/IMG_7069 7.jpg",
+  "image_name": "IMG_7069 7.jpg",
+  "chess_set": "marshall2",
+  "corners": [
+    [
+      1262,
+      1481
+    ],
+    [
+      3275,
+      1537
+    ],
+    [
+      3199,
+      3541
+    ],
+    [
+      654,
+      3295
+    ]
+  ],
+  "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+  "annotation_method": "manual_interactive",
+  "timestamp": "2025-10-08T00:54:38.003732",
+  "image_size": {
+    "width": 4284,
+    "height": 5712
+  }
+}

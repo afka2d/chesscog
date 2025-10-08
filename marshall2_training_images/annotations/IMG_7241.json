@@ -1,0 +1,30 @@
+{
+  "image_path": "marshall2_training_images/IMG_7241.jpg",
+  "image_name": "IMG_7241.jpg",
+  "chess_set": "marshall2",
+  "corners": [
+    [
+      1221,
+      2037
+    ],
+    [
+      3004,
+      2105
+    ],
+    [
+      3063,
+      3648
+    ],
+    [
+      634,
+      3481
+    ]
+  ],
+  "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPP1/RNBQKBNR w KQkq - 0 1",
+  "annotation_method": "manual_interactive",
+  "timestamp": "2025-10-08T00:55:11.570171",
+  "image_size": {
+    "width": 4284,
+    "height": 5712
+  }
+}

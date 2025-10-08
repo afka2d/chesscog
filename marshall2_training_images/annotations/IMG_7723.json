@@ -1,0 +1,27 @@
+{
+  "image_path": "marshall2_training_images/IMG_7723.jpg",
+  "image_name": "IMG_7723.jpg",
+  "chess_set": "marshall2",
+  "corners": [
+    [
+      0,
+      0
+    ],
+    [
+      1000,
+      0
+    ],
+    [
+      1000,
+      1000
+    ],
+    [
+      0,
+      1000
+    ]
+  ],
+  "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+  "white_turn": true,
+  "notes": "Please annotate the 4 corner points and provide the correct FEN notation",
+  "status": "pending"
+}
